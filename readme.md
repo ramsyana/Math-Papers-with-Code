@@ -63,9 +63,9 @@ Contributions are welcome! To contribute:
 4. Include:
    - README.md with paper details
    - Source code
-   - Tests
+   - Tests (if applicable)
    - Docker support (if applicable)
-   - Documentation
+   - Documentation (if applicable)
    - Performance benchmarks (optional)
 
 Please see CONTRIBUTING.md for detailed guidelines.

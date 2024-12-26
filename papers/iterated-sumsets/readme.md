@@ -81,13 +81,6 @@ For h = 3:
 Program finished
 ```
 
-## Testing
-
-```bash
-cd python/tests
-python -m pytest
-```
-
 ## Performance Notes
 
 The implementation focuses on:
