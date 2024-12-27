@@ -30,7 +30,7 @@ The project aims to implement and explore:
         - [x] Addition with log terms
         - [x] Multiplication with log terms
         - [ ] Derivatives of log terms
-        - [ ] Integration producing log terms
+        - [x] Integration producing log terms
       - [ ] Berezin integration
         - [ ] Integration with respect to ζ
         - [ ] Properties of odd integration
