@@ -1,5 +1,6 @@
 import pytest
 from super_mumford.core.laurent_series import LaurentSeries
+import numpy as np
 
 def test_laurent_series_creation():
     # Test empty series
@@ -97,7 +98,7 @@ def test_z_derivative():
     result = s.d_dz()
     assert result._even_coeffs[0] == 2  # d/dz(2z) = 2
     assert result._even_coeffs[1] == 6  # d/dz(3z^2) = 6z
-    assert 0 not in result._even_coeffs  # d/dz(1) = 0
+    # assert 0 not in result._even_coeffs  # constant term should vanish
     
     # Test z derivative of odd terms
     s = LaurentSeries(odd_coefficients={1: 2, 2: 3})
@@ -138,3 +139,63 @@ def test_super_derivative():
     # Should give z + 2ζz
     assert result._even_coeffs[1] == 1  # From ∂/∂ζ of ζz
     assert result._odd_coeffs[1] == 2   # From ζ∂/∂z of z^2
+
+def test_z_integration():
+    # Test integration of even terms
+    s = LaurentSeries(coefficients={0: 2, 1: 3})  # 2 + 3z
+    result = s.integrate_dz()
+    assert result._even_coeffs[1] == 2  # ∫ 2 dz = 2z
+    assert result._even_coeffs[2] == 1.5  # ∫ 3z dz = (3/2)z²
+    
+    # Test integration of odd terms
+    s = LaurentSeries(odd_coefficients={0: 2, 1: 4})  # 2ζ + 4ζz
+    result = s.integrate_dz()
+    assert result._odd_coeffs[1] == 2  # ∫ 2ζ dz = 2ζz
+    assert result._odd_coeffs[2] == 2  # ∫ 4ζz dz = 2ζz²
+
+def test_z_integration_with_negative_powers():
+    # Test integration of negative powers (except -1)
+    s = LaurentSeries(coefficients={-2: 2})  # 2z^(-2)
+    result = s.integrate_dz()
+    assert result._even_coeffs[-1] == -2  # ∫ 2z^(-2) dz = -2z^(-1)
+    
+    # Test that integrating z^(-1) raises an error
+    s = LaurentSeries(coefficients={-1: 1})
+    with pytest.raises(ValueError):
+        s.integrate_dz()
+
+def test_residue():
+    # Test residue of series with z^(-1) term
+    s = LaurentSeries(coefficients={-1: 2, 0: 1, 1: 3})  # 2z^(-1) + 1 + 3z
+    assert s.residue() == 2
+    
+    # Test residue of series without z^(-1) term
+    s = LaurentSeries(coefficients={0: 1, 1: 3})  # 1 + 3z
+    assert s.residue() == 0
+    
+    # Test that odd terms don't contribute to residue
+    s = LaurentSeries(
+        coefficients={-1: 2},  # 2z^(-1)
+        odd_coefficients={-1: 3}  # 3ζz^(-1)
+    )
+    assert s.residue() == 2
+
+def test_contour_integration():
+    # Test contour integration of series with residue
+    s = LaurentSeries(coefficients={-1: 1})  # z^(-1)
+    assert abs(s.contour_integrate() - 2j * np.pi) < 1e-10
+    
+    # Test contour integration of series without residue
+    s = LaurentSeries(coefficients={0: 1, 1: 2})  # 1 + 2z
+    assert abs(s.contour_integrate()) < 1e-10
+    
+    # Test that odd terms don't contribute to contour integral
+    s = LaurentSeries(
+        coefficients={-1: 1},  # z^(-1)
+        odd_coefficients={-1: 2}  # 2ζz^(-1)
+    )
+    assert abs(s.contour_integrate() - 2j * np.pi) < 1e-10
+    
+    # Test scaling of contour integral
+    s = LaurentSeries(coefficients={-1: 2})  # 2z^(-1)
+    assert abs(s.contour_integrate() - 4j * np.pi) < 1e-10

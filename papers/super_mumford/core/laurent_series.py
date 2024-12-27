@@ -148,23 +148,28 @@ class LaurentSeries:
         
         # Differentiate even terms
         for power, coeff in self._even_coeffs.items():
-            if power != 0:  # Skip constant terms as they vanish
+            # Now only add terms where power is not 0
+            if power != 0:
                 new_power = power - 1
                 if abs(new_power) <= self._truncation:
                     result_even[new_power] = power * coeff
                     
         # Differentiate odd terms
         for power, coeff in self._odd_coeffs.items():
-            if power != 0:  # Skip constant terms as they vanish
+            # Now only add terms where power is not 0
+            if power != 0:
                 new_power = power - 1
                 if abs(new_power) <= self._truncation:
                     result_odd[new_power] = power * coeff
-        
-        return LaurentSeries(
+
+        # Create new instance with the filtered results
+        result = LaurentSeries(
             coefficients=dict(result_even),
             odd_coefficients=dict(result_odd),
             truncation_order=self._truncation
         )
+        
+        return result
 
     def d_dzeta(self) -> 'LaurentSeries':
         """
@@ -197,6 +202,65 @@ class LaurentSeries:
         )
         
         return result + zeta_dz
+
+    def integrate_dz(self) -> 'LaurentSeries':
+        """
+        Compute the indefinite integral with respect to z.
+        For a series Σ (an + αnζ)z^n, returns Σ (an/(n+1) + αnζ/(n+1))z^(n+1) + C
+        
+        Returns:
+            LaurentSeries: The indefinite integral
+            
+        Raises:
+            ValueError: If there's a term with power -1 (would give log term)
+        """
+        result_even = defaultdict(float)
+        result_odd = defaultdict(float)
+        
+        # Check for z^(-1) terms which would give log terms
+        if -1 in self._even_coeffs or -1 in self._odd_coeffs:
+            raise ValueError("Cannot integrate term with z^(-1) - would result in log term")
+        
+        # Integrate even terms
+        for power, coeff in self._even_coeffs.items():
+            new_power = power + 1
+            if abs(new_power) <= self._truncation:
+                result_even[new_power] = coeff / (power + 1)
+                
+        # Integrate odd terms
+        for power, coeff in self._odd_coeffs.items():
+            new_power = power + 1
+            if abs(new_power) <= self._truncation:
+                result_odd[new_power] = coeff / (power + 1)
+        
+        return LaurentSeries(
+            coefficients=dict(result_even),
+            odd_coefficients=dict(result_odd),
+            truncation_order=self._truncation
+        )
+
+    def residue(self) -> complex:
+        """
+        Compute the residue (coefficient of z^(-1)) of the series.
+        For a series Σ (an + αnζ)z^n, returns a_{-1}.
+        
+        Returns:
+            complex: The residue of the series
+        """
+        return self._even_coeffs.get(-1, 0.0)
+
+    def contour_integrate(self) -> complex:
+        """
+        Compute the contour integral ∮_{S¹|¹} along the super circle.
+        For a series f(z,ζ) = Σ (an + αnζ)z^n, returns 2πi * Res(f).
+        
+        The super contour integration formula reduces to the classical residue formula
+        because of the properties of Berezin integration for the odd variable.
+        
+        Returns:
+            complex: The value of the contour integral
+        """
+        return 2j * np.pi * self.residue()
 
     def __str__(self) -> str:
         """String representation of the series."""
