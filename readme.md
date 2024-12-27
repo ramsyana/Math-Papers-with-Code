@@ -9,6 +9,7 @@ A collection of implementations of mathematical algorithms and concepts from var
 | Paper Title | Author(s) | arXiv | Implementations | Status | Directory |
 |------------|-----------|--------|-----------------|---------|-----------|
 | Relative Sizes of Iterated Sumsets | Noah Kravitz | [2412.18598](https://arxiv.org/pdf/2412.18598) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/iterated-sumsets/` |
+| The Neveu-Schwarz Group and Schwarz's Extended Super Mumford Form | Katherine A. Maxwell & Alexander A. Voronov | [2412.18585](https://arxiv.org/pdf/2412.18585) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | 🚧 In Progress | `papers/super-mumford/` |
 
 ### Implementation Status Legend
 
@@ -31,15 +32,42 @@ Each paper implementation is organized in its own directory with its implementat
 .
 ├── README.md
 ├── papers/
-│   ├── iterated-sumsets/             # Paper: Relative Sizes of Iterated Sumsets
-│   │   ├── README.md                 # Paper-specific documentation
+│   ├── iterated-sumsets/
+│   │   ├── README.md
 │   │   └── python/
-│   │       ├── iterated_sumsets.py   # Main implementation
-│   │       └── tests/                # Test files (if any)
-│   └── future-papers/                # Template for future implementations
+│   │       ├── iterated_sumsets.py
+│   │       └── tests/
+│   ├── super-mumford/
+│   │   ├── README.md
+│   │   └── python/
+│   │       ├── core/
+│   │       │   ├── __init__.py
+│   │       │   ├── laurent_series.py
+│   │       │   ├── matrix_ops.py
+│   │       │   └── vector_spaces.py
+│   │       ├── geometry/
+│   │       │   ├── __init__.py
+│   │       │   ├── grassmannian.py
+│   │       │   └── line_bundles.py
+│   │       ├── groups/
+│   │       │   ├── __init__.py
+│   │       │   ├── heisenberg.py
+│   │       │   ├── neveu_schwarz.py
+│   │       │   └── witt.py
+│   │       ├── tests/
+│   │       │   ├── __init__.py
+│   │       │   ├── test_laurent_series.py
+│   │       │   ├── test_matrix_ops.py
+│   │       │   └── test_vector_spaces.py
+│   │       ├── utils/
+│   │       │   ├── __init__.py
+│   │       │   └── validation.py
+│   │       ├── README.md
+│   │       └── pyproject.toml
+│   └── future-papers/
 │       ├── README.md
 │       └── python/
-└── common/                           # Shared utilities and tools
+└── common/
     ├── testing/
     └── benchmarks/
 ```
@@ -49,8 +77,10 @@ Each paper implementation is organized in its own directory with its implementat
 Each paper implementation includes its own README with specific instructions. For Python implementations:
 
 ```bash
-cd papers/iterated-sumsets/python
-python iterated_sumsets.py
+# Example for Super Mumford project
+cd papers/super-mumford/python
+pip install -r requirements.txt
+python -m pytest tests/
 ```
 
 ## Contributing
