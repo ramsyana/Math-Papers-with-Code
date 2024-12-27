@@ -29,7 +29,7 @@ The project aims to implement and explore:
         - [x] Class structure for log terms
         - [x] Addition with log terms
         - [x] Multiplication with log terms
-        - [ ] Derivatives of log terms
+        - [-] Derivatives of log terms (Partially implemented, but could be more robust)
         - [x] Integration producing log terms
       - [ ] Berezin integration
         - [ ] Integration with respect to ζ
