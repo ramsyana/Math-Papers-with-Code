@@ -182,3 +182,24 @@ class LogLaurentSeries:
             odd_log_terms=result_odd,
             truncation_order=min(self._truncation, other._truncation)
         )
+
+    def multiply_by_zeta(self, other: 'LogLaurentSeries') -> 'LogLaurentSeries':
+        """Multiply series by ζ, effectively swapping even and odd terms"""
+        result_even = defaultdict(lambda: defaultdict(float))
+        result_odd = defaultdict(lambda: defaultdict(float))
+        
+        # Odd terms of other become even terms
+        for log_power, terms in other._odd_terms.items():
+            for z_power, coeff in terms.items():
+                result_even[log_power][z_power] = coeff
+        
+        # Even terms of other become odd terms
+        for log_power, terms in other._even_terms.items():
+            for z_power, coeff in terms.items():
+                result_odd[log_power][z_power] = coeff
+        
+        return LogLaurentSeries(
+            log_terms=dict(result_even),
+            odd_log_terms=dict(result_odd),
+            truncation_order=other._truncation
+        )
