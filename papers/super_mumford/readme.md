@@ -22,6 +22,23 @@ The project aims to implement and explore:
   - [x] Basic arithmetic operations
   - [x] Derivative operations (d/dz, d/dζ, D_ζ)
   - [ ] Integration methods
+    - [x] Basic z-integration (indefinite, without log terms)
+    - [x] Contour integration via residues
+    - [ ] Extended integration capabilities
+      - [ ] Log term support via LogLaurentSeries class
+        - [ ] Class structure for log terms
+        - [ ] Addition with log terms
+        - [ ] Multiplication with log terms
+        - [ ] Derivatives of log terms
+        - [ ] Integration producing log terms
+      - [ ] Berezin integration
+        - [ ] Integration with respect to ζ
+        - [ ] Properties of odd integration
+        - [ ] Integration over super domains
+      - [ ] Advanced integration features
+        - [ ] Definite integration over arbitrary contours
+        - [ ] Integration over super manifolds
+        - [ ] Integration over super moduli spaces
   - [ ] Advanced coefficient manipulation
 
 - [ ] Vector Space Implementations
