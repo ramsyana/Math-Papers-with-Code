@@ -25,10 +25,10 @@ The project aims to implement and explore:
     - [x] Basic z-integration (indefinite, without log terms)
     - [x] Contour integration via residues
     - [ ] Extended integration capabilities
-      - [ ] Log term support via LogLaurentSeries class
-        - [ ] Class structure for log terms
-        - [ ] Addition with log terms
-        - [ ] Multiplication with log terms
+      - [x] Log term support via LogLaurentSeries class
+        - [x] Class structure for log terms
+        - [x] Addition with log terms
+        - [x] Multiplication with log terms
         - [ ] Derivatives of log terms
         - [ ] Integration producing log terms
       - [ ] Berezin integration
