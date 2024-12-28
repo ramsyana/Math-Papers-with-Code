@@ -20,7 +20,7 @@ The project aims to implement and explore:
 ### Phase 1: Core Mathematical Structures
 - [x] Laurent Series Implementation
   - [x] Basic arithmetic operations
-  - [x] Derivative operations (d/dz, d/dζ, D_ζ)
+  - [x] Basic derivative operations (d/dz, d/dζ, D_ζ)
   - [ ] Integration methods
     - [x] Basic z-integration (indefinite, without log terms)
     - [x] Contour integration via residues
@@ -29,7 +29,13 @@ The project aims to implement and explore:
         - [x] Class structure for log terms
         - [x] Addition with log terms
         - [x] Multiplication with log terms
-        - [-] Derivatives of log terms (Partially implemented, but could be more robust)
+        - [ ] Extended derivative operations
+          - [x] Basic derivatives (d/dz, d/dζ, D_ζ)
+          - [x] j/2-differential graded structure
+          - [ ] Lie derivative operations
+          - [ ] Super KP flow derivatives
+          - [ ] Derivatives for duality operations
+          - [ ] Commutator computations [fDζ, Dζ]
         - [x] Integration producing log terms
       - [ ] Berezin integration
         - [ ] Integration with respect to ζ
