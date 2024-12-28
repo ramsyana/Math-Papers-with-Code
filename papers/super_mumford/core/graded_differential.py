@@ -97,3 +97,9 @@ class GradedDifferential:
             if power in terms:
                 coeff += terms[power]
         return coeff
+        
+    def __add__(self, other: 'GradedDifferential') -> 'GradedDifferential':
+        """Add two graded differentials."""
+        if self._j != other._j:
+            raise ValueError("Cannot add differentials of different grades")
+        return GradedDifferential(self._series + other._series, self._j)

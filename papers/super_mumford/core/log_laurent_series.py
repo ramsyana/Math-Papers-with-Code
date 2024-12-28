@@ -123,11 +123,37 @@ class LogLaurentSeries:
             truncation_order=min(self._truncation, other._truncation)
         )
 
-    def __mul__(self, other: 'LogLaurentSeries') -> 'LogLaurentSeries':
-        """
-        Multiply two log Laurent series following the Koszul rule.
-        For log terms, we use: log^a(z) * log^b(z) = log^(a+b)(z)
-        """
+    def __mul__(self, other) -> 'LogLaurentSeries':
+        """Multiply log Laurent series and handle scalar multiplication"""
+        if isinstance(other, (int, float, complex)):
+            # Handle scalar multiplication
+            result_even = {}
+            result_odd = {}
+            
+            # Scale even terms
+            for log_power in self._even_terms:
+                result_even[log_power] = {
+                    z_power: coeff * other 
+                    for z_power, coeff in self._even_terms[log_power].items()
+                }
+                
+            # Scale odd terms 
+            for log_power in self._odd_terms:
+                result_odd[log_power] = {
+                    z_power: coeff * other
+                    for z_power, coeff in self._odd_terms[log_power].items()
+                }
+                
+            return LogLaurentSeries(
+                log_terms=result_even,
+                odd_log_terms=result_odd,
+                truncation_order=self._truncation
+            )
+        
+        # Original multiplication code for two LogLaurentSeries
+        if not isinstance(other, LogLaurentSeries):
+            return NotImplemented
+        
         result_even = defaultdict(lambda: defaultdict(float))
         result_odd = defaultdict(lambda: defaultdict(float))
         
@@ -203,3 +229,28 @@ class LogLaurentSeries:
             odd_log_terms=dict(result_odd),
             truncation_order=other._truncation
         )
+
+    def __sub__(self, other: 'LogLaurentSeries') -> 'LogLaurentSeries':
+        """Subtract two log Laurent series."""
+        result_even = defaultdict(lambda: defaultdict(float))
+        result_odd = defaultdict(lambda: defaultdict(float))
+        
+        # Handle even terms
+        all_log_powers = set(self._even_terms.keys()) | set(other._even_terms.keys())
+        for log_power in all_log_powers:
+            all_powers = set(self._even_terms[log_power].keys()) | set(other._even_terms[log_power].keys())
+            for power in all_powers:
+                coeff = (self._even_terms[log_power][power] - other._even_terms[log_power][power])
+                if abs(coeff) > 1e-15:
+                    result_even[log_power][power] = coeff
+        
+        # Handle odd terms
+        all_log_powers = set(self._odd_terms.keys()) | set(other._odd_terms.keys())
+        for log_power in all_log_powers:
+            all_powers = set(self._odd_terms[log_power].keys()) | set(other._odd_terms[log_power].keys())
+            for power in all_powers:
+                coeff = (self._odd_terms[log_power][power] - other._odd_terms[log_power][power])
+                if abs(coeff) > 1e-15:
+                    result_odd[log_power][power] = coeff
+                    
+        return LogLaurentSeries(log_terms=dict(result_even), odd_log_terms=dict(result_odd))
