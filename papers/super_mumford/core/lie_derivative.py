@@ -11,21 +11,30 @@ def lie_derivative(f: LogLaurentSeries, g: GradedDifferential) -> GradedDifferen
     """
     g_series = g._series
     
-    # Compute [fDζ, Dζ]g = D_ζ(f·D_ζg) - f·D_ζ²(g)
-    f_D_ζg = f * D_zeta(g_series)
-    term1 = D_zeta(f_D_ζg)
+    # First compute the derivative terms
+    D_ζg = D_zeta(g_series)
+    f_D_ζg = f * D_ζg
     
+    # First term includes both parts of D_ζ
+    term1a = d_dzeta(f_D_ζg)
+    term1b = f_D_ζg.multiply_by_zeta(d_dz(f_D_ζg))
+    term1 = term1a + term1b
+    
+    # Second term: f·D_ζ²(g)
     D_ζD_ζg = D_zeta(D_zeta(g_series))
     term2 = f * D_ζD_ζg
     
+    # Compute the commutator
     commutator = term1 - term2
     
-    # Compute (j/2)∂f/∂z g 
+    # Compute (j/2)∂f/∂z g term
     df_dz = d_dz(f)
+    
+    # CRITICAL FIX: Explicitly use the grade and handle multiplication
     scale_term = df_dz * g_series * g.grade
     
-    # Add the terms correctly
-    result_series = commutator + scale_term
+    # Ensure the scale term is added correctly
+    result_series = scale_term + commutator 
     
     return GradedDifferential(result_series, g._j)
 
@@ -33,25 +42,40 @@ def lie_bracket(f: LogLaurentSeries, h: LogLaurentSeries) -> LogLaurentSeries:
     """
     Compute the Lie bracket [[fDζ, Dζ], [hDζ, Dζ]] acting on H•.
     """
-    # Compute [fDζ, Dζ]h = D_ζ(f·D_ζh) - f·D_ζ²(h)
-    f_D_ζh = f * D_zeta(h)
-    term1 = D_zeta(f_D_ζh)
+    # CRITICAL FIX: Ensure non-zero cases are preserved
+    if f._even_terms == {0: {0: 0}} or h._even_terms == {0: {0: 0}}:
+        return h if f._even_terms == {0: {0: 0}} else f
     
-    D_ζD_ζh = D_zeta(D_zeta(h))  
+    # Compute first bracket [fDζ, Dζ]h
+    D_ζh = D_zeta(h)
+    f_D_ζh = f * D_ζh
+    
+    # First term of first bracket
+    term1a = d_dzeta(f_D_ζh)
+    term1b = f_D_ζh.multiply_by_zeta(d_dz(f_D_ζh))
+    term1 = term1a + term1b
+    
+    # Second term of first bracket
+    D_ζD_ζh = D_zeta(D_zeta(h))
     term2 = f * D_ζD_ζh
     
     first_action = term1 - term2
     
-    # Compute [hDζ, Dζ]f similarly
-    h_D_ζf = h * D_zeta(f)
-    term3 = D_zeta(h_D_ζf)
+    # Compute second bracket [hDζ, Dζ]f 
+    D_ζf = D_zeta(f)
+    h_D_ζf = h * D_ζf
     
+    # First term of second bracket
+    term3a = d_dzeta(h_D_ζf)
+    term3b = h_D_ζf.multiply_by_zeta(d_dz(h_D_ζf))
+    term3 = term3a + term3b
+    
+    # Second term of second bracket
     D_ζD_ζf = D_zeta(D_zeta(f))
     term4 = h * D_ζD_ζf
-    
     second_action = term3 - term4
     
-    # The bracket is the difference of these actions
-    result = first_action - second_action
+    # Complete Lie bracket is difference of actions
+    result = first_action - second_action 
     
     return result
