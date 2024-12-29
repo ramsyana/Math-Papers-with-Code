@@ -90,54 +90,55 @@ def lie_bracket(f: LogLaurentSeries, h: LogLaurentSeries) -> LogLaurentSeries:
     """
     Compute [[fDζ, Dζ], [hDζ, Dζ]] acting on H•.
     """
-    logger.debug("\n==== Starting lie_bracket computation ====")
-    logger.debug(f"Input f: {f}")
-    logger.debug(f"Input h: {h}")
-    
-    # Zero checks
-    logger.debug("\nChecking zero conditions:")
-    logger.debug(f"f._even_terms: {f._even_terms}")
-    logger.debug(f"h._even_terms: {h._even_terms}")
+    logger.info("\n==== Starting lie_bracket computation ====")
+    logger.info(f"Input vectors: f = {f}, h = {h}")
     
     if is_zero_series(f):
-        logger.debug("f is zero, returning h")
+        logger.info("f is zero, returning h")
         return h
     if is_zero_series(h):
-        logger.debug("h is zero, returning f")
+        logger.info("h is zero, returning f")
         return f
     
     # First bracket computation
-    logger.debug("\nComputing first bracket [fDζ, Dζ]h:")
+    logger.info("\nComputing first bracket [fDζ, Dζ]h:")
     D_zeta_h = D_zeta(h)
     D_zeta_f = D_zeta(f)
-    logger.debug(f"D_ζ(h) = {D_zeta_h}")
+    logger.info(f"D_ζ(h) = {D_zeta_h}")
     
     D_zeta_D_zeta_h = D_zeta(D_zeta_h)
-    logger.debug(f"D_ζ²(h) = {D_zeta_D_zeta_h}")
+    logger.info(f"D_ζ²(h) = {D_zeta_D_zeta_h}")
     
-    first_action = (f * D_zeta_D_zeta_h - D_zeta(f * D_zeta_h) + D_zeta_h * 2 * D_zeta_f)
-    logger.debug(f"First bracket result = {first_action}")
+    term1 = f * D_zeta_D_zeta_h
+    logger.info(f"f·D_ζ²(h) = {term1}")
     
-    # Second bracket computation
-    logger.debug("\nComputing second bracket [hDζ, Dζ]f:")
+    term2 = D_zeta(f * D_zeta_h)
+    logger.info(f"D_ζ(f·D_ζ(h)) = {term2}")
     
-    logger.debug(f"D_ζ(f) = {D_zeta_f}")
+    term3 = D_zeta_h * 2 * D_zeta_f
+    logger.info(f"2D_ζ(h)·D_ζ(f) = {term3}")
     
+    first_action = term1 - term2 + term3
+    logger.info(f"First bracket complete = {first_action}")
+    
+    # Second bracket computation  
+    logger.info("\nComputing second bracket [hDζ, Dζ]f:")
     D_zeta_D_zeta_f = D_zeta(D_zeta_f)
-    logger.debug(f"D_ζ²(f) = {D_zeta_D_zeta_f}")
+    logger.info(f"D_ζ²(f) = {D_zeta_D_zeta_f}")
     
-    second_action = (h * D_zeta_D_zeta_f - D_zeta(h * D_zeta_f) - D_zeta_f * 2 * D_zeta_h)
-    logger.debug(f"Second bracket result = {second_action}")
+    term4 = h * D_zeta_D_zeta_f
+    term5 = D_zeta(h * D_zeta_f) 
+    term6 = D_zeta_f * 2 * D_zeta_h
+    second_action = term4 - term5 - term6
+    logger.info(f"Second bracket complete = {second_action}")
     
     # Complete bracket
     result = first_action - second_action
-    logger.debug(f"\nFinal bracket result = {result}")
-    logger.debug(f"Result internal dict: {result._even_terms}")
-    logger.debug(f"Converting to string from: {dict(result._even_terms)}")
-    logger.debug("Final coefficients:")
+    logger.info(f"\nFinal result = {result}")
+    logger.info("Final coefficients:")
     for k in result._even_terms:
         for p, c in result._even_terms[k].items():
-            logger.debug(f"  z^{p}: {c}")
+            logger.info(f"z^{p}: {c}")
     
     return result
 
