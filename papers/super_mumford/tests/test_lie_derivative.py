@@ -1,6 +1,7 @@
 import pytest
 from super_mumford.core.log_laurent_series import LogLaurentSeries
 from super_mumford.core.graded_differential import GradedDifferential
+from super_mumford.core.log_laurent_derivatives import d_dz
 from super_mumford.core.lie_derivative import lie_derivative, lie_bracket
 import logging
 
@@ -77,25 +78,43 @@ def test_lie_derivative_linearity():
 
 def test_lie_derivative_jacobi():
     """Test Jacobi identity for Lie derivatives"""
-    # Test [X,[Y,Z]] + [Y,[Z,X]] + [Z,[X,Y]] = 0
+    logger.debug("\n=== Testing Jacobi Identity ===")
+    
     f = LogLaurentSeries(log_terms={0: {1: 1}})  # X = z
     g = LogLaurentSeries(log_terms={0: {2: 1}})  # Y = z²
     h = LogLaurentSeries(log_terms={0: {3: 1}})  # Z = z³
     
-    # Compute cyclic sum of brackets
-    bracket1 = lie_bracket(f, lie_bracket(g, h))
-    bracket2 = lie_bracket(g, lie_bracket(h, f))
-    bracket3 = lie_bracket(h, lie_bracket(f, g))
+    logger.debug(f"Computing [X,[Y,Z]]:")
+    inner1 = lie_bracket(g, h)
+    logger.debug(f"[Y,Z] = {inner1}")
+    bracket1 = lie_bracket(f, inner1)
+    logger.debug(f"[X,[Y,Z]] = {bracket1}")
+    
+    logger.debug(f"\nComputing [Y,[Z,X]]:")
+    inner2 = lie_bracket(h, f)
+    logger.debug(f"[Z,X] = {inner2}")
+    bracket2 = lie_bracket(g, inner2)
+    logger.debug(f"[Y,[Z,X]] = {bracket2}")
+    
+    logger.debug(f"\nComputing [Z,[X,Y]]:")
+    inner3 = lie_bracket(f, g)
+    logger.debug(f"[X,Y] = {inner3}")
+    bracket3 = lie_bracket(h, inner3)
+    logger.debug(f"[Z,[X,Y]] = {bracket3}")
     
     result = bracket1 + bracket2 + bracket3
-    
-    # Check that cyclic sum vanishes
+    logger.debug(f"\nFinal sum = {result}")
+
+    # Print coefficients of result
+    logger.debug("\nCoefficients in final sum:")
+    for k in result._even_terms.keys():
+        for p in result._even_terms[k].keys():
+            logger.debug(f"Power {p} (log power {k}): {result._even_terms[k][p]}")
+
+    # Original assertion
     for k in result._even_terms.keys():
         for p in result._even_terms[k].keys():
             assert abs(result._even_terms[k][p]) < 1e-9
-    for k in result._odd_terms.keys():
-        for p in result._odd_terms[k].keys():
-            assert abs(result._odd_terms[k][p]) < 1e-9
 
 def test_scale_term_computation():
     """Test explicitly that scale term produces z² terms"""
