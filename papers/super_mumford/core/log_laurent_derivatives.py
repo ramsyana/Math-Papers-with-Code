@@ -12,8 +12,8 @@ def d_dz(series: LogLaurentSeries) -> LogLaurentSeries:
         for z_power, coeff in z_terms.items():
             # Chain rule: d/dz(z^n * log^k(z))
             # = n*z^(n-1)*log^k(z) + k*z^(n-1)*log^(k-1)(z)
-            if z_power != 0:  # Term with z^n
-                result_even[log_power][z_power-1] = z_power * coeff
+            result_even[log_power][z_power] = coeff  # Keep the same power for derivative coefficient
+            
             if log_power > 0:  # Term with log(z)
                 if log_power-1 not in result_even:
                     result_even[log_power-1] = {}

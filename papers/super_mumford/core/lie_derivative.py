@@ -52,7 +52,7 @@ def lie_derivative(f: LogLaurentSeries, g: GradedDifferential) -> GradedDifferen
     logger.debug(f"g_series terms: {g_series._even_terms}")
     logger.debug(f"g.grade: {g.grade}")
     
-    scale_term = df_dz * g_series * (2 * g.grade)
+    scale_term = df_dz * g_series * g._j  # This is right, but need to fix d_dz
     logger.debug(f"Scale term before final multiply: {df_dz * g_series}")
     logger.debug(f"Step 7: Scale term (j/2)·∂f/∂z·g = {scale_term}")
     logger.debug("Scale term coefficients:")
@@ -109,23 +109,24 @@ def lie_bracket(f: LogLaurentSeries, h: LogLaurentSeries) -> LogLaurentSeries:
     # First bracket computation
     logger.debug("\nComputing first bracket [fDζ, Dζ]h:")
     D_zeta_h = D_zeta(h)
+    D_zeta_f = D_zeta(f)
     logger.debug(f"D_ζ(h) = {D_zeta_h}")
     
     D_zeta_D_zeta_h = D_zeta(D_zeta_h)
     logger.debug(f"D_ζ²(h) = {D_zeta_D_zeta_h}")
     
-    first_action = f * D_zeta_D_zeta_h - D_zeta(f * D_zeta_h)
+    first_action = (f * D_zeta_D_zeta_h - D_zeta(f * D_zeta_h) + D_zeta_h * 2 * D_zeta_f)
     logger.debug(f"First bracket result = {first_action}")
     
     # Second bracket computation
     logger.debug("\nComputing second bracket [hDζ, Dζ]f:")
-    D_zeta_f = D_zeta(f)
+    
     logger.debug(f"D_ζ(f) = {D_zeta_f}")
     
     D_zeta_D_zeta_f = D_zeta(D_zeta_f)
     logger.debug(f"D_ζ²(f) = {D_zeta_D_zeta_f}")
     
-    second_action = h * D_zeta_D_zeta_f - D_zeta(h * D_zeta_f)
+    second_action = (h * D_zeta_D_zeta_f - D_zeta(h * D_zeta_f) - D_zeta_f * 2 * D_zeta_h)
     logger.debug(f"Second bracket result = {second_action}")
     
     # Complete bracket
