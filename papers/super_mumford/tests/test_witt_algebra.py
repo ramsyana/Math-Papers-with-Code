@@ -56,6 +56,16 @@ def test_witt_action_leibniz():
     print("Left result:", left._series)
     print("Right result:", right._series)
     print("Difference:", (left - right)._series)
+    
+    print("Detailed Left Components:")
+    print("Left Term Breakdown:")
+    for k, v in left._series._even_terms.items():
+        print(f"Log Power {k}: {v}")
+    
+    print("Detailed Right Components:")
+    print("Right Term Breakdown:")
+    for k, v in right._series._even_terms.items():
+        print(f"Log Power {k}: {v}")
 
     assert (left - right)._series.is_zero()
 
