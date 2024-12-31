@@ -103,3 +103,9 @@ class GradedDifferential:
         if self._j != other._j:
             raise ValueError("Cannot add differentials of different grades")
         return GradedDifferential(self._series + other._series, self._j)
+    
+    def __sub__(self, other: 'GradedDifferential') -> 'GradedDifferential':
+        """Subtract two graded differentials."""
+        if self._j != other._j:
+            raise ValueError("Cannot subtract differentials of different grades")
+        return GradedDifferential(self._series - other._series, self._j)

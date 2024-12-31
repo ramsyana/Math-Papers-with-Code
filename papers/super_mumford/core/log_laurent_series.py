@@ -215,3 +215,24 @@ class LogLaurentSeries:
                     result_odd[log_power][power] = coeff
                     
         return LogLaurentSeries(log_terms=dict(result_even), odd_log_terms=dict(result_odd))
+    
+    def is_zero(self) -> bool:
+        """Check if series is effectively zero"""
+        return (all(abs(coeff) <= 1e-15 
+                for terms in self._even_terms.values() 
+                for coeff in terms.values()) and
+                all(abs(coeff) <= 1e-15
+                    for terms in self._odd_terms.values() 
+                    for coeff in terms.values()))
+        
+    def is_constant(self) -> bool:
+        """Check if series is constant (only z^0 terms)"""
+        for terms in self._even_terms.values():
+            for power in terms.keys():
+                if power != 0:
+                    return False
+        for terms in self._odd_terms.values():
+            if terms:  # Any odd terms make it non-constant
+                return False
+        return True
+    
