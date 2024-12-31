@@ -25,19 +25,16 @@ def witt_action(f: LogLaurentSeries, g: GradedDifferential) -> GradedDifferentia
     
     return GradedDifferential(commutator + scale_term, g._j)
 
-
 def witt_bracket(f: LogLaurentSeries, h: LogLaurentSeries) -> LogLaurentSeries:
-   """Compute [[fDζ, Dζ], [hDζ, Dζ]]"""
-   
-   # First compute super derivatives
-   D_zeta_h = D_zeta(h)
-   D_zeta_f = D_zeta(f)
-   
-   # [fDζ, Dζ]h
-   bracket1 = f * D_zeta(D_zeta_h) - D_zeta(f * D_zeta_h)
-   
-   # [hDζ, Dζ]f  
-   bracket2 = h * D_zeta(D_zeta_f) - D_zeta(h * D_zeta_f)
-   
-   # Return [[fDζ, Dζ], [hDζ, Dζ]]
-   return bracket1 - bracket2
+    """Compute [[fDζ, Dζ], [hDζ, Dζ]]"""
+    # Compute first bracket [fDζ, Dζ]h
+    D_zeta_h = D_zeta(h)
+    D_zeta_D_zeta_h = D_zeta(D_zeta_h)
+    bracket1 = f * D_zeta_D_zeta_h - D_zeta(f * D_zeta_h)
+
+    # Compute second bracket [hDζ, Dζ]f
+    D_zeta_f = D_zeta(f)
+    D_zeta_D_zeta_f = D_zeta(D_zeta_f)  
+    bracket2 = h * D_zeta_D_zeta_f - D_zeta(h * D_zeta_f)
+
+    return bracket1 - bracket2

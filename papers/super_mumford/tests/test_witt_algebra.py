@@ -7,6 +7,47 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Bracket relation tests
+def test_L_L_bracket():
+    """Test [Lp, Lq] = (p-q)Lp+q"""
+    L1 = LogLaurentSeries(log_terms={0: {2: 1}})  # L1 ~ z²∂z
+    L2 = LogLaurentSeries(log_terms={0: {3: 1}})  # L2 ~ z³∂z
+    
+    result = witt_bracket(L1, L2)
+    expected = LogLaurentSeries(log_terms={0: {5: -1}})  # -1 * z⁵∂z
+    
+    for log_power in result._even_terms:
+        for z_power in result._even_terms[log_power]:
+            assert abs(result._even_terms[log_power][z_power] - 
+                      expected._even_terms[log_power][z_power]) < 1e-10
+
+def test_L_G_bracket():
+    """Test [Lp, Gr] = (p/2 - r)Gp+r"""
+    L1 = LogLaurentSeries(log_terms={0: {2: 1}})  # L1 ~ z²∂z
+    G1 = LogLaurentSeries(odd_log_terms={0: {3: 1}})  # G1 ~ z³ζ∂z
+    
+    result = witt_bracket(L1, G1)
+    expected = LogLaurentSeries(odd_log_terms={0: {5: -2}})  # (-2) * z⁵ζ∂z
+    
+    for log_power in result._odd_terms:
+        for z_power in result._odd_terms[log_power]:
+            assert abs(result._odd_terms[log_power][z_power] - 
+                      expected._odd_terms[log_power][z_power]) < 1e-10
+
+def test_G_G_bracket():
+    """Test [Gr, Gs] = 2Lr+s"""
+    G1 = LogLaurentSeries(odd_log_terms={0: {2: 1}})  # G1 ~ z²ζ∂z
+    G2 = LogLaurentSeries(odd_log_terms={0: {3: 1}})  # G2 ~ z³ζ∂z
+    
+    result = witt_bracket(G1, G2)
+    expected = LogLaurentSeries(log_terms={0: {5: 2}})  # 2z⁵∂z
+    
+    for log_power in result._even_terms:
+        for z_power in result._even_terms[log_power]:
+            assert abs(result._even_terms[log_power][z_power] - 
+                      expected._even_terms[log_power][z_power]) < 1e-10
+
+# Action tests
 def test_basic_witt_action():
     """Test basic action of super Witt algebra element on differential"""
     # Test case: [zDζ, Dζ] acting on z[dz|dζ]
