@@ -71,19 +71,21 @@ def test_witt_action_leibniz():
     assert (left - right)._series.is_zero()
 
 def test_witt_action_jacobi():
-   """Test Jacobi identity for Witt algebra action"""
-   f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
-   f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
-   f3 = LogLaurentSeries(log_terms={0: {3: 1}})  # z³
-   g = GradedDifferential(LogLaurentSeries(log_terms={0: {1: 1}}), j=1)
+    """Test the Jacobi identity [[X,Y],Z] + [[Y,Z],X] + [[Z,X],Y] = 0"""
+    f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
+    f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
+    f3 = LogLaurentSeries(log_terms={0: {3: 1}})  # z³
+    g = GradedDifferential(LogLaurentSeries(log_terms={0: {1: 1}}), j=1)
 
-   # Compute cyclic sum of nested actions
-   term1 = witt_action(f1, witt_action(f2, witt_action(f3, g)))
-   term2 = witt_action(f2, witt_action(f3, witt_action(f1, g)))
-   term3 = witt_action(f3, witt_action(f1, witt_action(f2, g)))
-
-   result = term1 + term2 + term3
-   assert result._series.is_zero()
+    # [[X,Y],Z]
+    bracket1 = witt_bracket(witt_bracket(f1, f2), f3)
+    # [[Y,Z],X] 
+    bracket2 = witt_bracket(witt_bracket(f2, f3), f1)
+    # [[Z,X],Y]
+    bracket3 = witt_bracket(witt_bracket(f3, f1), f2)
+    
+    result = bracket1 + bracket2 + bracket3
+    assert result.is_zero()
 
 def test_zero_inputs():
     """Test Witt action with zero inputs"""
