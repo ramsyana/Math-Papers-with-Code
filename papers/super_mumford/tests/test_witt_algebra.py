@@ -40,26 +40,23 @@ def test_witt_action_grading():
         assert result.grade == g.grade
 
 def test_witt_action_leibniz():
-    """Test Leibniz rule for Witt action"""
-    # Test ρ(X)(g1·g2) = ρ(X)g1·g2 + g1·ρ(X)g2
     f = LogLaurentSeries(log_terms={0: {1: 1}})  # X = [zDζ, Dζ]
-    
-    g1 = GradedDifferential(
-        LogLaurentSeries(log_terms={0: {1: 1}}),
-        j=1
-    )
-    g2 = GradedDifferential(
-        LogLaurentSeries(log_terms={0: {2: 1}}),
-        j=1
-    )
-    
-    # Compute left side: ρ(X)(g1·g2)
+
+    g1 = GradedDifferential(LogLaurentSeries(log_terms={0: {1: 1}}), j=1)
+    g2 = GradedDifferential(LogLaurentSeries(log_terms={0: {2: 1}}), j=1)
+
+    # Add detailed logging
+    print("g1:", g1._series)
+    print("g2:", g2._series)
+    print("g1 * g2:", (g1 * g2)._series)
+
     left = witt_action(f, g1 * g2)
-    
-    # Compute right side: ρ(X)g1·g2 + g1·ρ(X)g2
     right = witt_action(f, g1) * g2 + g1 * witt_action(f, g2)
-    
-    # Compare coefficients
+
+    print("Left result:", left._series)
+    print("Right result:", right._series)
+    print("Difference:", (left - right)._series)
+
     assert (left - right)._series.is_zero()
 
 def test_witt_action_jacobi():
