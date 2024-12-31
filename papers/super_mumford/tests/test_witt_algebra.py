@@ -1,4 +1,5 @@
 import pytest
+from core.log_laurent_derivatives import d_dz, D_zeta
 from core.log_laurent_series import LogLaurentSeries
 from core.graded_differential import GradedDifferential
 from core.witt_algebra import witt_action, witt_bracket
@@ -70,27 +71,19 @@ def test_witt_action_leibniz():
     assert (left - right)._series.is_zero()
 
 def test_witt_action_jacobi():
-    """Test Jacobi identity for Witt algebra action"""
-    # Test [X,[Y,Z]] + [Y,[Z,X]] + [Z,[X,Y]] = 0
-    # X = [zDζ, Dζ], Y = [z²Dζ, Dζ], Z = [z³Dζ, Dζ]
-    f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
-    f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
-    f3 = LogLaurentSeries(log_terms={0: {3: 1}})  # z³
+   """Test Jacobi identity for Witt algebra action"""
+   f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
+   f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
+   f3 = LogLaurentSeries(log_terms={0: {3: 1}})  # z³
+   g = GradedDifferential(LogLaurentSeries(log_terms={0: {1: 1}}), j=1)
 
-    g = GradedDifferential(
-        LogLaurentSeries(log_terms={0: {1: 1}}),
-        j=1
-    )
+   # Compute cyclic sum of nested actions
+   term1 = witt_action(f1, witt_action(f2, witt_action(f3, g)))
+   term2 = witt_action(f2, witt_action(f3, witt_action(f1, g)))
+   term3 = witt_action(f3, witt_action(f1, witt_action(f2, g)))
 
-    # Compute cyclic sum of nested actions
-    term1 = witt_action(f1, witt_action(f2, witt_action(f3, g)))
-    term2 = witt_action(f2, witt_action(f3, witt_action(f1, g)))
-    term3 = witt_action(f3, witt_action(f1, witt_action(f2, g)))
-
-    result = term1 + term2 + term3
-
-    # The sum should vanish
-    assert result._series.is_zero()
+   result = term1 + term2 + term3
+   assert result._series.is_zero()
 
 def test_zero_inputs():
     """Test Witt action with zero inputs"""
