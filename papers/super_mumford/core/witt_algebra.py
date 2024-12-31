@@ -9,51 +9,40 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def witt_action(f: LogLaurentSeries, g: GradedDifferential) -> GradedDifferential:
-    print("\n--- Witt Action Detailed Debug ---")
-    print(f"Input vector field f: {f}")
-    print(f"Input differential g: {g._series}")
-    print(f"Differential grade j: {g._j}")
-    print(f"Is f constant? {f.is_constant()}")
-    print(f"Is g zero? {g._series.is_zero()}")
+    """
+    Compute the action of a Witt algebra element [fDζ, Dζ] on a graded differential g.
+    """
+    logger.info("Starting Witt action computation")
+    logger.debug("[Input] f (vector field): %s", f)
+    logger.debug("[Input] g (differential): %s | Grade: %s", g._series, g._j)
 
-    # Detailed zero input handling
     if f.is_constant() or g._series.is_zero():
-        print("Returning zero differential due to constant field or zero series")
+        logger.info("[Shortcut] Returning zero differential: Constant field or zero series")
         return GradedDifferential(LogLaurentSeries(), g._j)
-    
-    # Compute derivatives with logging
+
+    logger.info("[Step] Computing D_ζ(g)")
     D_zeta_g = D_zeta(g._series)
-    print(f"D_ζ(g): {D_zeta_g}")
+    logger.debug("[Result] D_ζ(g): %s", D_zeta_g)
 
-    D_zeta_D_zeta_g = D_zeta(D_zeta_g)
-    print(f"D_ζ²(g): {D_zeta_D_zeta_g}")
-
-    # Precise commutator computation
-    term1 = f * D_zeta_D_zeta_g
-    print(f"Term 1 (f * D_ζ²(g)): {term1}")
-
-    f_D_zeta_g = f * D_zeta_g
-    print(f"f * D_ζ(g): {f_D_zeta_g}")
-
-    term2 = D_zeta(f_D_zeta_g)
-    print(f"Term 2 (D_ζ(f * D_ζ(g))): {term2}")
-
-    # Algebraically correct commutator
+    logger.info("[Step] Computing terms of the commutator")
+    term1 = f * D_zeta(D_zeta_g)
+    term2 = D_zeta(f) * D_zeta_g + f * D_zeta(D_zeta_g)
     commutator = term1 - term2
-    print(f"Commutator: {commutator}")
+    logger.debug("[Intermediate] Term 1: %s", term1)
+    logger.debug("[Intermediate] Term 2: %s", term2)
+    logger.debug("[Result] Commutator: %s", commutator)
 
-    # Correct scale term computation
+    logger.info("[Step] Computing scale term")
     df_dz = d_dz(f)
-    print(f"df/dz: {df_dz}")
-
     scale_term = (df_dz * g._series) * g._j
-    print(f"Scale term (multiplied by full j): {scale_term}")
+    logger.debug("[Intermediate] df/dz: %s", df_dz)
+    logger.debug("[Result] Scale term: %s", scale_term)
 
-    # Combine terms
+    logger.info("[Step] Combining terms into result series")
     result_series = commutator + scale_term
-    print(f"Result series: {result_series}")
-    print(f"Coefficients of z²: {result_series._even_terms.get(0, {}).get(2, 0)}")
+    logger.debug("[Result] Combined series: %s", result_series)
 
+    logger.info("[Summary] Computed Witt action result")
     return GradedDifferential(result_series, g._j)
 
 

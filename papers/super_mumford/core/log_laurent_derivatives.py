@@ -5,34 +5,36 @@ def d_dz(series: LogLaurentSeries) -> LogLaurentSeries:
     """z-derivative of log Laurent series"""
     result_even = {}
     result_odd = {}
-    
+
     # Handle even terms
     for log_power, z_terms in series._even_terms.items():
         result_even[log_power] = {}
         for z_power, coeff in z_terms.items():
             # Chain rule: d/dz(z^n * log^k(z))
             # = n*z^(n-1)*log^k(z) + k*z^(n-1)*log^(k-1)(z)
-            result_even[log_power][z_power] = coeff  # Keep the same power for derivative coefficient
-            
+            if z_power != 0:
+                result_even[log_power][z_power - 1] = z_power * coeff
+
             if log_power > 0:  # Term with log(z)
-                if log_power-1 not in result_even:
-                    result_even[log_power-1] = {}
-                if z_power-1 not in result_even[log_power-1]:
-                    result_even[log_power-1][z_power-1] = 0
-                result_even[log_power-1][z_power-1] += log_power * coeff
+                if log_power - 1 not in result_even:
+                    result_even[log_power - 1] = {}
+                if z_power - 1 not in result_even[log_power - 1]:
+                    result_even[log_power - 1][z_power - 1] = 0
+                result_even[log_power - 1][z_power - 1] += log_power * coeff
 
     # Handle odd terms similarly
     for log_power, z_terms in series._odd_terms.items():
         result_odd[log_power] = {}
         for z_power, coeff in z_terms.items():
             if z_power != 0:
-                result_odd[log_power][z_power-1] = z_power * coeff
+                result_odd[log_power][z_power - 1] = z_power * coeff
+
             if log_power > 0:
-                if log_power-1 not in result_odd:
-                    result_odd[log_power-1] = {}
-                if z_power-1 not in result_odd[log_power-1]:
-                    result_odd[log_power-1][z_power-1] = 0
-                result_odd[log_power-1][z_power-1] += log_power * coeff
+                if log_power - 1 not in result_odd:
+                    result_odd[log_power - 1] = {}
+                if z_power - 1 not in result_odd[log_power - 1]:
+                    result_odd[log_power - 1][z_power - 1] = 0
+                result_odd[log_power - 1][z_power - 1] += log_power * coeff
 
     return LogLaurentSeries(log_terms=result_even, odd_log_terms=result_odd)
 
@@ -48,4 +50,10 @@ def d_dzeta(series: LogLaurentSeries) -> LogLaurentSeries:
 
 def D_zeta(series: LogLaurentSeries) -> LogLaurentSeries:
     """Super derivative D_ζ = ∂/∂ζ + ζ∂/∂z"""
-    return d_dzeta(series) + series.multiply_by_zeta(d_dz(series))
+    d_dzeta_result = d_dzeta(series)
+    d_dz_result = d_dz(series)
+    
+    # Multiply d_dz_result by ζ using the multiply_by_zeta method
+    zeta_d_dz_result = series.multiply_by_zeta(d_dz_result)
+    
+    return d_dzeta_result + zeta_d_dz_result
