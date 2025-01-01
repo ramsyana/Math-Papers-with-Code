@@ -50,10 +50,5 @@ def d_dzeta(series: LogLaurentSeries) -> LogLaurentSeries:
 
 def D_zeta(series: LogLaurentSeries) -> LogLaurentSeries:
     """Super derivative D_ζ = ∂/∂ζ + ζ∂/∂z"""
-    d_dzeta_result = d_dzeta(series)
-    d_dz_result = d_dz(series)
-    
-    # Multiply d_dz_result by ζ using the multiply_by_zeta method
-    zeta_d_dz_result = series.multiply_by_zeta(d_dz_result)
-    
-    return d_dzeta_result + zeta_d_dz_result
+    zeta_term = series.multiply_by_zeta(d_dz(series))
+    return d_dzeta(series) + zeta_term

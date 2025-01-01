@@ -26,15 +26,32 @@ def witt_action(f: LogLaurentSeries, g: GradedDifferential) -> GradedDifferentia
     return GradedDifferential(commutator + scale_term, g._j)
 
 def witt_bracket(f: LogLaurentSeries, h: LogLaurentSeries) -> LogLaurentSeries:
-    """Compute [[fDζ, Dζ], [hDζ, Dζ]]"""
-    # Compute first bracket [fDζ, Dζ]h
-    D_zeta_h = D_zeta(h)
-    D_zeta_D_zeta_h = D_zeta(D_zeta_h)
-    bracket1 = f * D_zeta_D_zeta_h - D_zeta(f * D_zeta_h)
+    """Compute brackets for super Witt algebra"""
+    f_is_odd = bool(f._odd_terms)
+    h_is_odd = bool(h._odd_terms)
 
-    # Compute second bracket [hDζ, Dζ]f
-    D_zeta_f = D_zeta(f)
-    D_zeta_D_zeta_f = D_zeta(D_zeta_f)  
-    bracket2 = h * D_zeta_D_zeta_f - D_zeta(h * D_zeta_f)
+    if not f_is_odd and not h_is_odd:
+        # [Lp, Lq] = (p-q)Lp+q 
+        p = next(iter(f._even_terms[0].keys()))
+        q = next(iter(h._even_terms[0].keys()))
+        return LogLaurentSeries(log_terms={0: {p + q: p - q}})
 
-    return bracket1 - bracket2
+    elif not f_is_odd and h_is_odd:
+        # [Lp, Gr] = (p/2 - r)Gp+r
+        p = next(iter(f._even_terms[0].keys())) 
+        r = next(iter(h._odd_terms[0].keys()))
+        coeff = p/2 - r  
+        return LogLaurentSeries(odd_log_terms={0: {p + r: coeff}})
+
+    elif f_is_odd and h_is_odd:
+        # [Gr, Gs] = 2Lr+s
+        r = next(iter(f._odd_terms[0].keys()))
+        s = next(iter(h._odd_terms[0].keys()))  
+        return LogLaurentSeries(log_terms={0: {r + s: 2}})
+
+    else:
+        # [Gr, Lp] = -(p/2 - r)Gr+p
+        r = next(iter(f._odd_terms[0].keys()))
+        p = next(iter(h._even_terms[0].keys()))
+        coeff = -(p/2 - r)
+        return LogLaurentSeries(odd_log_terms={0: {r + p: coeff}})

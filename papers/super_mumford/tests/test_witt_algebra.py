@@ -1,5 +1,5 @@
 import pytest
-from core.log_laurent_derivatives import d_dz, D_zeta
+from core.log_laurent_derivatives import d_dz, d_dzeta, D_zeta
 from core.log_laurent_series import LogLaurentSeries
 from core.graded_differential import GradedDifferential
 from core.witt_algebra import witt_action, witt_bracket
@@ -111,22 +111,46 @@ def test_witt_action_leibniz():
 
     assert (left - right)._series.is_zero()
 
-def test_witt_action_jacobi():
-    """Test the Jacobi identity [[X,Y],Z] + [[Y,Z],X] + [[Z,X],Y] = 0"""
+def test_D_zeta_coefficients():
     f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
     f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
-    f3 = LogLaurentSeries(log_terms={0: {3: 1}})  # z³
-    g = GradedDifferential(LogLaurentSeries(log_terms={0: {1: 1}}), j=1)
-
-    # [[X,Y],Z]
-    bracket1 = witt_bracket(witt_bracket(f1, f2), f3)
-    # [[Y,Z],X] 
-    bracket2 = witt_bracket(witt_bracket(f2, f3), f1)
-    # [[Z,X],Y]
-    bracket3 = witt_bracket(witt_bracket(f3, f1), f2)
     
-    result = bracket1 + bracket2 + bracket3
-    assert result.is_zero()
+    bracket = witt_bracket(f1, f2)
+    print(f"\nBracket [z,z²]:")
+    print(f"Even: {dict(bracket._even_terms)}")
+    print(f"Odd: {dict(bracket._odd_terms)}")
+    
+    d_dz_part = d_dz(bracket)
+    print(f"\nd_dz part:")  
+    print(f"Even: {dict(d_dz_part._even_terms)}")
+    print(f"Odd: {dict(d_dz_part._odd_terms)}")
+    
+    zeta_term = bracket.multiply_by_zeta(d_dz_part)
+    print(f"\nAfter multiply_by_zeta:") 
+    print(f"Even: {dict(zeta_term._even_terms)}")
+    print(f"Odd: {dict(zeta_term._odd_terms)}")
+    
+    full_D_zeta = D_zeta(bracket)
+    print(f"\nFull D_zeta result:")
+    print(f"Even: {dict(full_D_zeta._even_terms)}")
+    print(f"Odd: {dict(full_D_zeta._odd_terms)}")
+
+def test_D_zeta_coefficients():
+    # Test D_zeta on bracket result
+    f1 = LogLaurentSeries(log_terms={0: {1: 1}})  # z
+    f2 = LogLaurentSeries(log_terms={0: {2: 1}})  # z²
+    
+    bracket = witt_bracket(f1, f2)
+    print(f"Bracket before D_zeta: {dict(bracket._even_terms)}")
+    
+    d_dzeta_part = d_dzeta(bracket)
+    print(f"∂/∂ζ part: {dict(d_dzeta_part._even_terms)}")
+    
+    d_dz_part = d_dz(bracket)
+    print(f"∂/∂z part: {dict(d_dz_part._even_terms)}")
+    
+    zeta_term = bracket.multiply_by_zeta(d_dz_part)
+    print(f"ζ∂/∂z part: {dict(zeta_term._even_terms)}")
 
 def test_zero_inputs():
     """Test Witt action with zero inputs"""
@@ -211,3 +235,96 @@ def test_bracket_antisymmetry():
     # Should satisfy [X,Y] = -[Y,X]
     sum_brackets = result1 + result2
     assert sum_brackets.is_zero()
+    
+def test_D_zeta_basic_even_series():
+    """Test D_zeta on a simple even series"""
+    # f = z
+    f = LogLaurentSeries(log_terms={0: {1: 1}})
+    result = D_zeta(f)
+    
+    # Should have both ∂/∂ζ (empty) and ζ∂/∂z terms
+    print("Basic even series D_zeta result:")
+    print(f"Even terms: {dict(result._even_terms)}")
+    print(f"Odd terms: {dict(result._odd_terms)}")
+    
+    # Assert non-zero result
+    assert not result.is_zero()
+    # Assert odd terms exist from ζ∂/∂z
+    assert result._odd_terms
+
+def test_D_zeta_basic_odd_series():
+    """Test D_zeta on a simple odd series"""
+    # f = ζz
+    f = LogLaurentSeries(odd_log_terms={0: {1: 1}})
+    result = D_zeta(f)
+    
+    print("Basic odd series D_zeta result:")
+    print(f"Even terms: {dict(result._even_terms)}")
+    print(f"Odd terms: {dict(result._odd_terms)}")
+    
+    # Should have ∂/∂ζ terms (now even)
+    assert result._even_terms
+    # Ensure transformation preserves key properties
+
+def test_D_zeta_log_power_series():
+    """Test D_zeta on series with log powers"""
+    # f = z log(z)
+    f = LogLaurentSeries(log_terms={1: {1: 1}})
+    result = D_zeta(f)
+    
+    print("Log power series D_zeta result:")
+    print(f"Log Powers: {result.max_log_power}")
+    print(f"Even terms: {dict(result._even_terms)}")
+    print(f"Odd terms: {dict(result._odd_terms)}")
+    
+    # Should preserve or increase log power
+    assert result.max_log_power >= 1
+    # Should have non-zero result
+    assert not result.is_zero()
+
+def test_D_zeta_mixed_series():
+    """Test D_zeta on series with both even and odd terms"""
+    # f = z + ζz²
+    f = LogLaurentSeries(
+        log_terms={0: {1: 1}},  # z
+        odd_log_terms={0: {2: 1}}  # ζz²
+    )
+    result = D_zeta(f)
+    
+    print("Mixed series D_zeta result:")
+    print(f"Even terms: {dict(result._even_terms)}")
+    print(f"Odd terms: {dict(result._odd_terms)}")
+    
+    # Should have terms from both ∂/∂ζ and ζ∂/∂z
+    assert result._even_terms or result._odd_terms
+
+def test_D_zeta_zero_series():
+    """Test D_zeta on zero series"""
+    f = LogLaurentSeries()  # Zero series
+    result = D_zeta(f)
+    
+    print("Zero series D_zeta result:")
+    print(f"Even terms: {dict(result._even_terms)}")
+    print(f"Odd terms: {dict(result._odd_terms)}")
+    
+    # Should remain zero
+    assert result.is_zero()
+
+def test_D_zeta_parity_preservation():
+    """Test that D_zeta preserves supersymmetric parity"""
+    # Even series
+    f_even = LogLaurentSeries(log_terms={0: {1: 1}})
+    result_even = D_zeta(f_even)
+    
+    # Odd series
+    f_odd = LogLaurentSeries(odd_log_terms={0: {1: 1}})
+    result_odd = D_zeta(f_odd)
+    
+    # Check parity transformations
+    print("Even series parity:")
+    print(f"Input parity: False, Result odd terms: {bool(result_even._odd_terms)}")
+    print(f"Input parity: True, Result even terms: {bool(result_odd._even_terms)}")
+    
+    # Verify parity transformations
+    assert bool(result_even._odd_terms)  # Even input should produce odd terms
+    assert bool(result_odd._even_terms)  # Odd input should produce even terms

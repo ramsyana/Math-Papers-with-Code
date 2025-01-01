@@ -171,25 +171,18 @@ class LogLaurentSeries:
         )
 
     def multiply_by_zeta(self, other: 'LogLaurentSeries') -> 'LogLaurentSeries':
-        """Multiply series by ζ, effectively swapping even and odd terms"""
-        result_even = defaultdict(lambda: defaultdict(float))
-        result_odd = defaultdict(lambda: defaultdict(float))
+        """Multiply series by ζ, swapping terms and preserving coefficients"""
+        print(f"\nMultiply by zeta input:")
+        print(f"Even terms: {dict(other._even_terms)}")
+        print(f"Odd terms: {dict(other._odd_terms)}")
         
-        # Odd terms of other become even terms
-        for log_power, terms in other._odd_terms.items():
-            for z_power, coeff in terms.items():
-                result_even[log_power][z_power] = coeff
-        
-        # Even terms of other become odd terms
-        for log_power, terms in other._even_terms.items():
-            for z_power, coeff in terms.items():
-                result_odd[log_power][z_power] = coeff
-        
-        return LogLaurentSeries(
-            log_terms=dict(result_even),
-            odd_log_terms=dict(result_odd),
-            truncation_order=other._truncation
+        result = LogLaurentSeries(
+            odd_log_terms=other._even_terms,
+            log_terms=other._odd_terms
         )
+        print(f"Result even: {dict(result._even_terms)}")
+        print(f"Result odd: {dict(result._odd_terms)}")
+        return result
 
     def __sub__(self, other: 'LogLaurentSeries') -> 'LogLaurentSeries':
         """Subtract two log Laurent series."""
