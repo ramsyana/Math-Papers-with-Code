@@ -9,7 +9,7 @@ A collection of implementations of mathematical algorithms and concepts from var
 | Paper Title | Author(s) | arXiv | Implementations | Status | Directory |
 |------------|-----------|--------|-----------------|---------|-----------|
 | Relative Sizes of Iterated Sumsets | Noah Kravitz | [2412.18598](https://arxiv.org/pdf/2412.18598) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/iterated-sumsets/` |
-| The Neveu-Schwarz Group and Schwarz's Extended Super Mumford Form | Katherine A. Maxwell & Alexander A. Voronov | [2412.18585](https://arxiv.org/pdf/2412.18585) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | 🚧 In Progress | `papers/super-mumford/` |
+| The Neveu-Schwarz Group and Schwarz's Extended Super Mumford Form | Katherine A. Maxwell & Alexander A. Voronov | [2412.18585](https://arxiv.org/pdf/2412.18585) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ⏸️ On Hold | `papers/super-mumford/` |
 
 ### Implementation Status Legend
 
