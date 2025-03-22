@@ -18,7 +18,7 @@ Implementation of algorithms and concepts from the paper ["A Remark on an Explic
 
 | Language | Status | Features | Directory |
 |----------|---------|-----------|------------|
-| ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | Full implementation | `python/` |
+| ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | Full implementation with test suite | `python/` |
 
 ## Overview
 
@@ -127,6 +127,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 1. Various Authors. (2025). "Stirling Numbers and Power Sums." arXiv:2503.14508v2
 2. Graham, R. L., Knuth, D. E., & Patashnik, O. (1994). "Concrete Mathematics: A Foundation for Computer Science." Addison-Wesley.
-```
-
-This README provides a comprehensive overview of your implementation, including the mathematical background, key components, usage examples, and performance notes. It follows the same structure as the reference README while being tailored to the specific content of your Stirling Numbers and Power Sums implementation.
