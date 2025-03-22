@@ -1,6 +1,6 @@
 # A Remark on an Explicit Formula for the Sums of Powers of Integers
 
-Implementation of algorithms and concepts from the paper ["A Remark on an Explicit Formula for the Sums of Powers of Integers"](https://arxiv.org/pdf/2503.14508v2).
+Implementation of algorithms and concepts from the paper "A Remark on an Explicit Formula for the Sums of Powers of Integers" (arXiv:2503.14508v2).
 
 ## Paper Information
 
@@ -18,7 +18,7 @@ Implementation of algorithms and concepts from the paper ["A Remark on an Explic
 
 | Language | Status | Features | Directory |
 |----------|---------|-----------|------------|
-| ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | Full implementation with test suite | `python/` |
+| Python   | ✅ Complete | Full implementation with test suite | `python/` |
 
 ## Overview
 
@@ -125,5 +125,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## References
 
-1. Various Authors. (2025). "Stirling Numbers and Power Sums." arXiv:2503.14508v2
-2. Graham, R. L., Knuth, D. E., & Patashnik, O. (1994). "Concrete Mathematics: A Foundation for Computer Science." Addison-Wesley.
+References
+[1] K. N. Boyadzhiev, Close encounters with the Stirling numbers of the second kind, Mathematics Magazine 85(4) (2012), pp. 252–266.
+[2] J. L. Cereceda, Polynomial interpolation and sums of powers of integers, International Journal of Mathematical Education in Science and Technology 48(2) (2017), pp. 267-277.
+[3] J. L. Cereceda, Dual recursive formulas for the sums of powers of integers, Far East Journal of Mathematical Education 26(2) (2024), pp. 111-121.
+[4] H. W. Gould, Evaluation of sums of convolved powers using Stirling and Eulerian numbers, The Fibonacci Quarterly 16(6) (1978), [Part 1], pp. 488–497.
+[5] F. T. Howard, Sums of powers of integers, Mathematical Spectrum 26(4) (1993/1994), pp. 103–109.
+[6] D. E. Knuth, Johann Faulhaber and sums of powers, Mathematics of Computation 61(203) (1993), pp. 277–294.
+[7] J. Quaintance and H. W. Gould, Combinatorial Identities for Stirling Numbers. The Unpublished Notes of H W Gould. World Scientific Publishing, Singapore, 2016.
+[8] E. Samsonadze, On sums of powers of natural numbers. Preprint (2024), available at https://arxiv.org/abs/2411.11859v1
