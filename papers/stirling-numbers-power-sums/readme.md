@@ -111,6 +111,71 @@ The implementation uses the explicit formula:
 S(k, j) = (1/j!) * sum_{i=0}^j (-1)^(j-i) * binomial(j, i) * i^k
 ```
 
+## Usage
+
+### Setting Up a Virtual Environment
+
+Before running the implementation or tests, it's recommended to create a virtual environment to manage dependencies. Follow these steps:
+
+1. **Create a Virtual Environment**:
+   Navigate to the directory where your Python files are located and run:
+
+```
+
+python3 -m venv venv
+
+```
+
+2. **Activate the Virtual Environment**:
+Activate the virtual environment with:
+
+```
+
+source venv/bin/activate  \# On macOS/Linux
+
+```
+
+or
+
+```
+
+venv\Scripts\activate     \# On Windows
+
+```
+
+3. **Install Required Packages**:
+After activating the virtual environment, install `pytest` (if you plan to run tests):
+
+```
+
+pip install pytest
+
+```
+
+### Running the Implementation
+
+To execute the Python implementation, use the following command in your terminal:
+
+```
+
+python3 sum_powers.py
+
+```
+
+This will run the script and display the calculated sums of powers along with verification against known formulas.
+
+### Running the Tests
+
+To run the test suite and verify the implementation, use:
+
+```
+
+python3 -m pytest test_sum_powers.py
+
+```
+
+This command will execute all tests defined in `test_sum_powers.py` to ensure that the implementation is working correctly.
+
 ## Contributing
 
 Contributions welcome in areas such as:
