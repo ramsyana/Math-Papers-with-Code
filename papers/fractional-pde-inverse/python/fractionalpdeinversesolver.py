@@ -1,20 +1,61 @@
 import numpy as np
 from scipy.special import gamma
-from mpmath.functions.expseries import mittag_leffler
-print("Successfully imported mittag_leffler:", mittag_leffler)
+# Fix the import for mpmath
+from mpmath import mp
+print("Successfully imported mpmath:", mp)
 from scipy import linalg
 import matplotlib.pyplot as plt
 from functools import lru_cache
 from scipy.optimize import minimize
 
-# Remove the wrapper function since we're using mpmath directly
-# def mp_mittag_leffler(alpha, beta, z):
-#     """
-#     Wrapper for Mittag-Leffler function
-#     
-#     Parameters match the scipy/custom implementation
-#     """
-#     return mittag_leffler(alpha, beta, z)
+# Define our own implementation of the Mittag-Leffler function
+def mittag_leffler(alpha, beta, z):
+    """
+    Implementation of the Mittag-Leffler function using mpmath's core functionality.
+    
+    The Mittag-Leffler function is defined as:
+    E_{alpha,beta}(z) = sum_{k=0}^{infty} z^k / Gamma(alpha*k + beta)
+    
+    Parameters:
+    -----------
+    alpha : float
+        First parameter of the Mittag-Leffler function
+    beta : float
+        Second parameter of the Mittag-Leffler function
+    z : float or complex
+        Argument of the Mittag-Leffler function
+        
+    Returns:
+    --------
+    float
+        Value of the Mittag-Leffler function
+    """
+    # Convert inputs to mpmath precision
+    z_mp = mp.mpf(z)
+    alpha_mp = mp.mpf(alpha)
+    beta_mp = mp.mpf(beta)
+    
+    # Set precision and max terms for the series
+    mp.dps = 15  # Decimal places of precision
+    max_terms = 100
+    tolerance = mp.mpf('1e-15')
+    
+    # Initialize sum
+    result = mp.mpf(0)
+    term = mp.mpf(1) / mp.gamma(beta_mp)  # First term (k=0)
+    result += term
+    
+    # Compute the series
+    for k in range(1, max_terms):
+        term = (z_mp**k) / mp.gamma(alpha_mp*k + beta_mp)
+        result += term
+        
+        # Check for convergence
+        if abs(term) < tolerance:
+            break
+    
+    # Convert back to Python float
+    return float(result)
 
 class ImprovedFractionalPDEInverseSolver:
     """
@@ -134,7 +175,7 @@ class ImprovedFractionalPDEInverseSolver:
     def _mittag_leffler_cached(self, alpha, z):
         """Cached version of Mittag-Leffler function using mpmath"""
         # Use beta=1 for standard E_alpha(z), convert mpf to float for NumPy compatibility
-        return float(mittag_leffler(alpha, 1, z)) # Use mpmath's mittag_leffler directly
+        return mittag_leffler(alpha, 1, z)  # Use our wrapper function
     
     def _precompute_ml_kernel(self):
         """
@@ -229,6 +270,12 @@ class ImprovedFractionalPDEInverseSolver:
             if f is None:
                 f = np.zeros_like(self.t)
             
+            # Ensure shapes match
+            if len(h) != len(self.x):
+                raise ValueError(f"Spatial source h must have shape ({len(self.x)},), got {h.shape}")
+            if len(f) != len(self.t):
+                raise ValueError(f"Temporal source f must have shape ({len(self.t)},), got {f.shape}")
+            
             # Compute eigenfunction coefficients for initial condition and source
             phi_coeffs = np.array([np.sum(phi * ef) * self.dx for ef in self.eigenfunctions])
             h_coeffs = np.array([np.sum(h * ef) * self.dx for ef in self.eigenfunctions])
@@ -253,12 +300,15 @@ class ImprovedFractionalPDEInverseSolver:
                     tau = self.t[:, None] - self.t[None, :]
                     mask = tau > 0
                     
-                    # Compute kernel using broadcasting
+                    # Compute kernel using broadcasting - avoid division by zero
                     indices = np.abs(np.arange(len(self.t))[:, None] - np.arange(len(self.t))[None, :])
-                    kernel = mask * tau**(self.alpha-1) * self._ml_kernel[n, indices]
+                    # Add small epsilon to avoid division by zero
+                    safe_tau = np.where(mask, tau, 1.0)  # Replace zeros with ones where mask is False
+                    kernel = np.where(mask, safe_tau**(self.alpha-1) * self._ml_kernel[n, indices], 0)
                     
                     # Compute integrand and perform numerical integration
                     integrand = f[None, :] * kernel
+                    # Use trapezoid instead of trapz (which is deprecated)
                     temporal_source_terms[n, :] = np.trapz(integrand, x=self.t, axis=1) / gamma(self.alpha)
             
             # Assemble solution
@@ -365,8 +415,10 @@ class ImprovedFractionalPDEInverseSolver:
             # Compute indices for the Mittag-Leffler kernel
             indices = np.abs(np.arange(K+1)[:, None] - np.arange(K+1)[None, :])
             
-            # Add contribution from this mode using broadcasting
-            K_matrix += mask * (ef_val**2 * time_diff**(self.alpha-1) * self._ml_kernel[n, indices])
+            # Add contribution from this mode using broadcasting - avoid division by zero
+            safe_time_diff = np.where(mask, time_diff, 1.0)  # Replace zeros with ones where mask is False
+            safe_kernel = np.where(mask, safe_time_diff**(self.alpha-1) * self._ml_kernel[n, indices], 0)
+            K_matrix += ef_val**2 * safe_kernel
         
         # Scale by dt/gamma(alpha)
         K_matrix *= self.dt / gamma(self.alpha)
