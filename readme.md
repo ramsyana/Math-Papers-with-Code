@@ -11,6 +11,7 @@ A collection of implementations of mathematical algorithms and concepts from var
 | Relative Sizes of Iterated Sumsets | Noah Kravitz | [2412.18598](https://arxiv.org/pdf/2412.18598) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/iterated-sumsets/` |
 | A Remark on an Explicit Formula for the Sums of Powers of Integers | José L. Cereceda | [2503.14508v2](https://arxiv.org/pdf/2503.14508v2) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/stirling-numbers-power-sums/` |
 | The Neveu-Schwarz Group and Schwarz's Extended Super Mumford Form | Katherine A. Maxwell & Alexander A. Voronov | [2412.18585](https://arxiv.org/pdf/2412.18585) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ⏸️ On Hold | `papers/super-mumford/` |
+| Derivative Polynomials and Infinite Series for Squigonometric Functions | Bart S. Van Lith | [2503.19624](https://arxiv.org/abs/2503.19624) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/squigonometry/` |
 
 ### Implementation Status Legend
 
