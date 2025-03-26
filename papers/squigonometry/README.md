@@ -57,6 +57,7 @@ print(f"sq_{p}({t}) ≈ {sq_t}")
 # Verify Pythagorean identity
 identity_value = abs(sq_t) ** p + abs(cq_t) ** p
 print(f"|sq|^{p} + |cq|^{p} ≈ {identity_value}")
+```
 
 ## References
 
