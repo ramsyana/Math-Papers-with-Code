@@ -240,8 +240,9 @@ class ImprovedFractionalPDEInverseSolver:
             sum_term = 0
             for j in range(1, k+1):
                 # Calculate difference: f(t_{k-j+1}) - f(t_{k-j})
+                # Use j-1 to align weights with standard L1 scheme
                 diff = f[k-j+1] - f[k-j]
-                sum_term += self._caputo_weights[j] * diff
+                sum_term += self._caputo_weights[j-1] * diff
             
             df[k] = sum_term
         
@@ -400,7 +401,7 @@ class ImprovedFractionalPDEInverseSolver:
         if x_obs_idx is None:
             x_obs_idx = self.M // 2
         
-        # Construct the Volterra kernel matrix with correct time differences
+        # Construct the Volterra kernel matrix as lower triangular
         K_matrix = np.zeros((K+1, K+1))
         for i in range(K+1):
             for j in range(i):  # Only j < i contributes
@@ -415,9 +416,6 @@ class ImprovedFractionalPDEInverseSolver:
                     )
                     kernel_sum += ef_val**2 * kernel
                 K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
-        
-        # Make matrix symmetric (only needed for some solvers)
-        K_matrix = K_matrix + K_matrix.T - np.diag(np.diag(K_matrix))
         
         if method == 'l1':
             def ista(A, b, lambda_reg, max_iter=1000, tol=1e-6):
@@ -450,9 +448,10 @@ class ImprovedFractionalPDEInverseSolver:
             f = ista(K_matrix, g, lambda_reg)
             
         elif method == 'tikhonov':
-            # Add Tikhonov regularization
-            A = K_matrix + lambda_reg * np.eye(K+1)
-            f = linalg.solve(A, g, assume_a='sym')
+            # Standard Tikhonov regularization
+            A = K_matrix.T @ K_matrix + lambda_reg * np.eye(K+1)
+            b = K_matrix.T @ g
+            f = linalg.solve(A, b, assume_a='sym')
             
         elif method == 'tsvd':
             # Truncated SVD regularization
@@ -533,7 +532,9 @@ class ImprovedFractionalPDEInverseSolver:
                 A = np.diag(self.T**self.alpha * self._ml_kernel[:, -1])
                 b = omega_coeffs - f_effects
                 
-                def ista(A, b, lambda_reg, max_iter=1000, tol=1e-6):
+                def _ista_solver(self, A, b, lambda_reg, max_iter=1000, tol=1e-6):
+                    """ISTA solver for L1 regularization"""
+                    # Compute Lipschitz constant
                     L = np.linalg.norm(A.T @ A, ord=2)
                     step_size = 1.0 / L
                     
@@ -541,12 +542,16 @@ class ImprovedFractionalPDEInverseSolver:
                     x_prev = x.copy()
                     
                     for _ in range(max_iter):
+                        # Gradient step
                         grad = A.T @ (A @ x - b)
                         x_new = x - step_size * grad
+                        
+                        # Soft thresholding
                         x_new = np.sign(x_new) * np.maximum(
                             np.abs(x_new) - step_size * lambda_reg, 0
                         )
                         
+                        # Check convergence
                         if np.linalg.norm(x_new - x_prev) < tol:
                             break
                             
@@ -569,65 +574,38 @@ class ImprovedFractionalPDEInverseSolver:
             
         elif self.N == 2:
             # Compute eigenfunction coefficients for omega(x,y)
-            omega_coeffs = []
-            for ef in self.eigenfunctions:
-                omega_coeff = np.sum(omega * ef) * self.dx**2
-                omega_coeffs.append(omega_coeff)
+            omega_coeffs = np.array([np.sum(omega * ef) * self.dx**2 for ef in self.eigenfunctions])
             
-            omega_coeffs = np.array(omega_coeffs)
-            
-            # Compute the effect of f(t) on each mode
+            # Compute f_effects for t=T only
             f_effects = np.zeros(len(self.eigenvalues))
-            
             for n in range(len(self.eigenvalues)):
-                # Compute the effect of f(t) on this mode
-                f_effect = 0
-                for k in range(self.K+1):
-                    t_k = self.t[k]
-                    for j in range(k+1):
-                        t_j = self.t[j]
-                        if k > j:
-                            f_effect += f[j] * (t_k - t_j)**(self.alpha-1) * self._ml_kernel[n, k-j] * self.dt
-                
-                f_effects[n] = f_effect * (1 / gamma(self.alpha))
+                tau_points = self.t
+                time_diff = self.T - tau_points
+                kernel = np.zeros_like(time_diff)
+                mask = time_diff > 0  # Handle time_diff=0
+                kernel[mask] = time_diff[mask]**(self.alpha - 1) * np.array([
+                    mittag_leffler(self.alpha, self.alpha, -self.eigenvalues[n] * t_diff**self.alpha)
+                    for t_diff in time_diff[mask]
+                ])
+                integrand = f * kernel
+                f_effects[n] = np.trapz(integrand, x=tau_points) / gamma(self.alpha)
             
             if method == 'tikhonov':
-                # Compute coefficients for h(x,y) with Tikhonov regularization
                 h_coeffs = np.zeros(len(self.eigenvalues))
-                
                 for n in range(len(self.eigenvalues)):
                     denominator = self.T**self.alpha * self._ml_kernel[n, -1] + lambda_reg * self.eigenvalues[n]
                     h_coeffs[n] = (omega_coeffs[n] - f_effects[n]) / denominator
-            
-            elif method in ['tsvd', 'l1']:
-                # Similar implementation as 1D case
+            elif method == 'tsvd':
                 A = np.diag(self.T**self.alpha * self._ml_kernel[:, -1])
                 b = omega_coeffs - f_effects
-                
-                if method == 'tsvd':
-                    # SVD decomposition
-                    U, s, Vh = linalg.svd(A)
-                    
-                    # Determine truncation level
-                    s_filtered = np.where(s > lambda_reg * s[0], s, 0)
-                    s_inv = np.where(s_filtered > 0, 1.0 / s_filtered, 0)
-                    
-                    # Reconstruct solution
-                    h_coeffs = Vh.T @ (s_inv * (U.T @ b))
-                
-                else:  # L1 regularization
-                    def objective(h_coeffs_flat):
-                        h_coeffs_reshaped = h_coeffs_flat.reshape(-1)
-                        residual = A @ h_coeffs_reshaped - b
-                        return 0.5 * np.sum(residual**2) + lambda_reg * np.sum(np.abs(h_coeffs_reshaped))
-                    
-                    # Initial guess
-                    h0 = np.zeros(len(self.eigenvalues))
-                    
-                    # Solve optimization problem
-                    result = minimize(objective, h0, method='L-BFGS-B')
-                    h_coeffs = result.x
-            
+                U, s, Vh = linalg.svd(A)
+                s_filtered = np.where(s > lambda_reg * s[0], s, 0)
+                s_inv = np.where(s_filtered > 0, 1.0 / s_filtered, 0)
+                h_coeffs = Vh.T @ (s_inv * (U.T @ b))
+            elif method == 'l1':
+                A = np.diag(self.T**self.alpha * self._ml_kernel[:, -1])
+                b = omega_coeffs - f_effects
+                h_coeffs = self._ista_solver(A, b, lambda_reg)
             else:
                 raise ValueError("Regularization method must be 'tikhonov', 'tsvd', or 'l1'")
             
