@@ -9,12 +9,9 @@ from functools import lru_cache
 from scipy.optimize import minimize
 
 # Define our own implementation of the Mittag-Leffler function
-def mittag_leffler(alpha, beta, z):
+def mittag_leffler(alpha, beta, z, dps=15, max_terms=1000, tolerance=1e-15):
     """
     Implementation of the Mittag-Leffler function using mpmath's core functionality.
-    
-    The Mittag-Leffler function is defined as:
-    E_{alpha,beta}(z) = sum_{k=0}^{infty} z^k / Gamma(alpha*k + beta)
     
     Parameters:
     -----------
@@ -24,21 +21,28 @@ def mittag_leffler(alpha, beta, z):
         Second parameter of the Mittag-Leffler function
     z : float or complex
         Argument of the Mittag-Leffler function
+    dps : int
+        Decimal places of precision (default: 15)
+    max_terms : int
+        Maximum number of series terms (default: 1000)
+    tolerance : float
+        Convergence tolerance (default: 1e-15)
         
     Returns:
     --------
     float
         Value of the Mittag-Leffler function
     """
+    # Set precision
+    mp.dps = dps
+    
     # Convert inputs to mpmath precision
     z_mp = mp.mpf(z)
     alpha_mp = mp.mpf(alpha)
     beta_mp = mp.mpf(beta)
     
-    # Set precision and max terms for the series
-    mp.dps = 15  # Decimal places of precision
-    max_terms = 100
-    tolerance = mp.mpf('1e-15')
+    # Convert tolerance to mpmath precision
+    tolerance_mp = mp.mpf(str(tolerance))
     
     # Initialize sum
     result = mp.mpf(0)
@@ -51,7 +55,7 @@ def mittag_leffler(alpha, beta, z):
         result += term
         
         # Check for convergence
-        if abs(term) < tolerance:
+        if abs(term) < tolerance_mp:
             break
     
     # Convert back to Python float
@@ -63,6 +67,8 @@ class ImprovedFractionalPDEInverseSolver:
     
     Solves the fractional PDE:
     D_t^α u - Δu = h(x) + f(t), u(0,x) = phi(x), u(t,0) = u(t,π) = 0
+    
+    Note: Differs from paper (2503.17404v1.pdf) form D_t^α u - Δu = f(t)h(x), which may imply 1 < α < 2.
     
     where:
     - D_t^α is the Caputo fractional derivative of order α (0 < α < 1)
@@ -172,10 +178,10 @@ class ImprovedFractionalPDEInverseSolver:
             raise ValueError("Only N=1 (1D) or N=2 (2D) is supported.")
     
     @lru_cache(maxsize=128)
-    def _mittag_leffler_cached(self, alpha, z):
+    def _mittag_leffler_cached(self, alpha, z, dps=15, max_terms=1000, tolerance=1e-15):
         """Cached version of Mittag-Leffler function using mpmath"""
         # Use beta=1 for standard E_alpha(z), convert mpf to float for NumPy compatibility
-        return mittag_leffler(alpha, 1, z)  # Use our wrapper function
+        return mittag_leffler(alpha, 1, z, dps=dps, max_terms=max_terms, tolerance=tolerance)
     
     def _precompute_ml_kernel(self):
         """
@@ -215,8 +221,7 @@ class ImprovedFractionalPDEInverseSolver:
     
     def _caputo_fractional_derivative(self, f):
         """
-        Compute the Caputo fractional derivative using the L1 scheme.
-        Vectorized implementation using convolution.
+        Compute the Caputo fractional derivative using the L1 scheme with differences.
         
         Parameters:
         -----------
@@ -228,29 +233,38 @@ class ImprovedFractionalPDEInverseSolver:
         df : array_like
             Fractional derivative at each time point
         """
-        # Use convolution for efficient computation
         df = np.zeros_like(f)
         
-        # Improved convolution with proper alignment
-        # For large K, consider using scipy.signal.fftconvolve for better performance
-        df[1:] = np.convolve(f, self._caputo_weights[::-1], mode='full')[:len(f)-1]
+        # Implement the L1 scheme explicitly using differences
+        for k in range(1, len(f)):
+            sum_term = 0
+            for j in range(1, k+1):
+                # Calculate difference: f(t_{k-j+1}) - f(t_{k-j})
+                diff = f[k-j+1] - f[k-j]
+                sum_term += self._caputo_weights[j] * diff
+            
+            df[k] = sum_term
         
         return df
     
+    # Update solve_direct_problem docstring
     def solve_direct_problem(self, phi, psi=None, h=None, f=None):
         """
-        Solve the direct problem for the fractional PDE using spectral method.
+        Solve the direct problem: D_t^α u - Δu = h(x) + f(t), u(0,x) = phi(x), u(t,0) = u(t,π) = 0.
+        
+        Uses spectral method with solution:
+        u(t,x) = Σ_n [phi_n E_α(-λ_n t^α) + h_n t^α E_α(-λ_n t^α) + ∫_0^t (t-τ)^(α-1) E_{α,α}(-λ_n (t-τ)^α) f(τ) dτ / Γ(α)] φ_n(x)
         
         Parameters:
         -----------
         phi : array_like
             Initial condition u(0,x)
         psi : array_like, optional
-            Initial condition for u_t(0,x) (not used for α < 1)
+            Not used (for α < 1)
         h : array_like, optional
-            Spatial source term
+            Spatial source term h(x)
         f : array_like, optional
-            Temporal source term
+            Temporal source term f(t)
             
         Returns:
         --------
@@ -280,36 +294,38 @@ class ImprovedFractionalPDEInverseSolver:
             phi_coeffs = np.array([np.sum(phi * ef) * self.dx for ef in self.eigenfunctions])
             h_coeffs = np.array([np.sum(h * ef) * self.dx for ef in self.eigenfunctions])
             
-            # Vectorized implementation for better performance
             # Pre-allocate arrays for source terms
             homogeneous_terms = np.zeros((self.Nmax, len(self.t)))
             spatial_source_terms = np.zeros((self.Nmax, len(self.t)))
             temporal_source_terms = np.zeros((self.Nmax, len(self.t)))
             
-            # Compute homogeneous terms for all time steps at once
+            # Compute homogeneous terms and spatial source terms
             for n in range(self.Nmax):
                 homogeneous_terms[n, :] = phi_coeffs[n] * self._ml_kernel[n, :]
                 
-                # Spatial source contribution
                 if np.any(h):
                     spatial_source_terms[n, :] = h_coeffs[n] * self.t**self.alpha * self._ml_kernel[n, :]
-                
-                # Temporal source contribution - vectorized
-                if np.any(f):
-                    # Create time difference matrix and mask
-                    tau = self.t[:, None] - self.t[None, :]
-                    mask = tau > 0
-                    
-                    # Compute kernel using broadcasting - avoid division by zero
-                    indices = np.abs(np.arange(len(self.t))[:, None] - np.arange(len(self.t))[None, :])
-                    # Add small epsilon to avoid division by zero
-                    safe_tau = np.where(mask, tau, 1.0)  # Replace zeros with ones where mask is False
-                    kernel = np.where(mask, safe_tau**(self.alpha-1) * self._ml_kernel[n, indices], 0)
-                    
-                    # Compute integrand and perform numerical integration
-                    integrand = f[None, :] * kernel
-                    # Use trapezoid instead of trapz (which is deprecated)
-                    temporal_source_terms[n, :] = np.trapz(integrand, x=self.t, axis=1) / gamma(self.alpha)
+            
+            # Correct temporal source term computation
+            if np.any(f):
+                for n in range(self.Nmax):
+                    for k in range(1, len(self.t)):
+                        t_k = self.t[k]
+                        # Pre-compute time points for integration
+                        tau_points = self.t[:k+1]
+                        # Compute kernel values
+                        time_diff = t_k - tau_points
+                        kernel = (time_diff)**(self.alpha - 1) * np.array([
+                            mittag_leffler(
+                                self.alpha, 
+                                self.alpha, 
+                                -self.eigenvalues[n] * (t_diff)**self.alpha
+                            ) for t_diff in time_diff
+                        ])
+                        # Compute integrand
+                        integrand = f[:k+1] * kernel
+                        # Perform numerical integration
+                        temporal_source_terms[n, k] = np.trapz(integrand, x=tau_points) / gamma(self.alpha)
             
             # Assemble solution
             for k in range(1, len(self.t)):
@@ -317,9 +333,8 @@ class ImprovedFractionalPDEInverseSolver:
                     u[k, :] += (homogeneous_terms[n, k] + spatial_source_terms[n, k] + temporal_source_terms[n, k]) * ef
             
             return u
-        
+            
         elif self.N == 2:
-            # Improved 2D implementation with better efficiency
             # Initialize solution array
             u = np.zeros((len(self.t), self.M, self.M))
             
@@ -332,70 +347,52 @@ class ImprovedFractionalPDEInverseSolver:
             if f is None:
                 f = np.zeros_like(self.t)
             
-            # Compute eigenfunction coefficients for initial condition and source
-            # Use vectorized operations where possible
+            # Compute eigenfunction coefficients
             phi_coeffs = np.array([np.sum(phi * ef) * self.dx**2 for ef in self.eigenfunctions])
             h_coeffs = np.array([np.sum(h * ef) * self.dx**2 for ef in self.eigenfunctions])
             
             # Pre-allocate arrays for source terms
             homogeneous_terms = np.zeros((len(self.eigenvalues), len(self.t)))
             spatial_source_terms = np.zeros((len(self.eigenvalues), len(self.t)))
+            temporal_source_terms = np.zeros((len(self.eigenvalues), len(self.t)))
             
-            # Compute homogeneous and spatial source terms for all time steps at once
+            # Compute homogeneous and spatial source terms
             for n in range(len(self.eigenvalues)):
                 homogeneous_terms[n, :] = phi_coeffs[n] * self._ml_kernel[n, :]
                 
                 if np.any(h):
                     spatial_source_terms[n, :] = h_coeffs[n] * self.t**self.alpha * self._ml_kernel[n, :]
             
-            # Compute temporal source contribution using vectorization where possible
-            temporal_source_terms = np.zeros((len(self.eigenvalues), len(self.t)))
-            
+            # Correct temporal source term computation for 2D case
             if np.any(f):
                 for n in range(len(self.eigenvalues)):
-                    # Create time difference matrix and mask
-                    tau = self.t[:, None] - self.t[None, :]
-                    mask = tau > 0
-                    
-                    # Compute kernel using broadcasting
-                    indices = np.abs(np.arange(len(self.t))[:, None] - np.arange(len(self.t))[None, :])
-                    kernel = mask * tau**(self.alpha-1) * self._ml_kernel[n, indices]
-                    
-                    # Compute integrand and perform numerical integration
-                    integrand = f[None, :] * kernel
-                    temporal_source_terms[n, :] = np.trapz(integrand, x=self.t, axis=1) / gamma(self.alpha)
+                    for k in range(1, len(self.t)):
+                        t_k = self.t[k]
+                        # Pre-compute time points for integration
+                        tau_points = self.t[:k+1]
+                        # Compute kernel values
+                        time_diff = t_k - tau_points
+                        kernel = (time_diff)**(self.alpha - 1) * np.array([
+                            mittag_leffler(
+                                self.alpha, 
+                                self.alpha, 
+                                -self.eigenvalues[n] * (t_diff)**self.alpha
+                            ) for t_diff in time_diff
+                        ])
+                        # Compute integrand
+                        integrand = f[:k+1] * kernel
+                        # Perform numerical integration
+                        temporal_source_terms[n, k] = np.trapz(integrand, x=tau_points) / gamma(self.alpha)
             
-            # Assemble solution more efficiently
+            # Assemble solution
             for k in range(1, len(self.t)):
-                # Compute all eigenmode contributions at once for this time step
-                mode_contributions = homogeneous_terms[:, k] + spatial_source_terms[:, k] + temporal_source_terms[:, k]
-                
-                # Apply each eigenfunction contribution
                 for n, ef in enumerate(self.eigenfunctions):
-                    u[k, :, :] += mode_contributions[n] * ef
+                    u[k] += (homogeneous_terms[n, k] + spatial_source_terms[n, k] + temporal_source_terms[n, k]) * ef
             
             return u
 
+    # Update solve_inverse_problem_1 docstring
     def solve_inverse_problem_1(self, g, lambda_reg=1e-4, method='tikhonov', x_obs_idx=None):
-        """
-        Solve inverse problem 1: recover f(t) from observation g(t).
-        
-        Parameters:
-        -----------
-        g : array_like
-            Observation data g(t) = u(t, x_0)
-        lambda_reg : float
-            Regularization parameter
-        method : str
-            Regularization method ('tikhonov', 'tsvd', or 'l1')
-        x_obs_idx : int, optional
-            Index of observation point (defaults to middle of domain)
-            
-        Returns:
-        --------
-        f : array_like
-            Recovered temporal source term f(t)
-        """
         K = self.K
         alpha = self.alpha
         
@@ -403,72 +400,84 @@ class ImprovedFractionalPDEInverseSolver:
         if x_obs_idx is None:
             x_obs_idx = self.M // 2
         
-        # Construct the Volterra kernel matrix using vectorization
-        time_diff = self.t[:, None] - self.t[None, :]
-        mask = time_diff > 0
+        # Construct the Volterra kernel matrix with correct time differences
         K_matrix = np.zeros((K+1, K+1))
+        for i in range(K+1):
+            for j in range(i):  # Only j < i contributes
+                kernel_sum = 0
+                for n in range(self.Nmax):
+                    ef_val = self.eigenfunctions[n][x_obs_idx]
+                    t_diff = self.t[i] - self.t[j]
+                    kernel = t_diff**(self.alpha - 1) * mittag_leffler(
+                        self.alpha, 
+                        self.alpha, 
+                        -self.eigenvalues[n] * t_diff**self.alpha
+                    )
+                    kernel_sum += ef_val**2 * kernel
+                K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
         
-        for n in range(self.Nmax):
-            # Evaluate eigenfunction at observation point
-            ef_val = self.eigenfunctions[n][x_obs_idx]
+        # Make matrix symmetric (only needed for some solvers)
+        K_matrix = K_matrix + K_matrix.T - np.diag(np.diag(K_matrix))
+        
+        if method == 'l1':
+            def ista(A, b, lambda_reg, max_iter=1000, tol=1e-6):
+                # Compute Lipschitz constant for step size
+                L = np.linalg.norm(A.T @ A, ord=2)
+                step_size = 1.0 / L
+                
+                x = np.zeros(A.shape[1])
+                x_prev = x.copy()
+                
+                for _ in range(max_iter):
+                    # Gradient step
+                    grad = A.T @ (A @ x - b)
+                    x_new = x - step_size * grad
+                    
+                    # Soft thresholding
+                    x_new = np.sign(x_new) * np.maximum(
+                        np.abs(x_new) - step_size * lambda_reg, 0
+                    )
+                    
+                    # Check convergence
+                    if np.linalg.norm(x_new - x_prev) < tol:
+                        break
+                        
+                    x_prev = x.copy()
+                    x = x_new
+                
+                return x
             
-            # Compute indices for the Mittag-Leffler kernel
-            indices = np.abs(np.arange(K+1)[:, None] - np.arange(K+1)[None, :])
+            f = ista(K_matrix, g, lambda_reg)
             
-            # Add contribution from this mode using broadcasting - avoid division by zero
-            safe_time_diff = np.where(mask, time_diff, 1.0)  # Replace zeros with ones where mask is False
-            safe_kernel = np.where(mask, safe_time_diff**(self.alpha-1) * self._ml_kernel[n, indices], 0)
-            K_matrix += ef_val**2 * safe_kernel
-        
-        # Scale by dt/gamma(alpha)
-        K_matrix *= self.dt / gamma(self.alpha)
-        
-        # The rest of the method remains unchanged
-        if method == 'tikhonov':
+        elif method == 'tikhonov':
             # Add Tikhonov regularization
             A = K_matrix + lambda_reg * np.eye(K+1)
-            
-            # Solve the linear system
             f = linalg.solve(A, g, assume_a='sym')
-        
+            
         elif method == 'tsvd':
             # Truncated SVD regularization
             U, s, Vh = linalg.svd(K_matrix)
-            
-            # Determine truncation level based on singular values
             s_filtered = np.where(s > lambda_reg * s[0], s, 0)
             s_inv = np.where(s_filtered > 0, 1.0 / s_filtered, 0)
-            
-            # Reconstruct solution
             f = Vh.T @ (s_inv * (U.T @ g))
-        
-        elif method == 'l1':
-            # L1 regularization using optimization
-            def objective(f_flat):
-                f_reshaped = f_flat.reshape(-1)
-                residual = K_matrix @ f_reshaped - g
-                return 0.5 * np.sum(residual**2) + lambda_reg * np.sum(np.abs(f_reshaped))
             
-            # Initial guess
-            f0 = np.zeros(K+1)
-            
-            # Solve optimization problem
-            result = minimize(objective, f0, method='L-BFGS-B')
-            f = result.x
-        
         else:
             raise ValueError("Regularization method must be 'tikhonov', 'tsvd', or 'l1'")
-        
+            
         return f
 
+    # Update solve_inverse_problem_2 docstring
     def solve_inverse_problem_2(self, omega, f, lambda_reg=1e-4, method='tikhonov'):
         """
-        Solve inverse problem 2: recover h(x) from spatial measurement omega(x).
+        Solve inverse problem 2: recover h(x) from spatial measurement omega(x) = u(T,x).
+        
+        Solves the equation:
+        omega(x) = Σ_n [phi_n E_α(-λ_n T^α) + h_n T^α E_α(-λ_n T^α) + ∫_0^T (T-τ)^(α-1) E_{α,α}(-λ_n (T-τ)^α) f(τ) dτ / Γ(α)] φ_n(x)
         
         Parameters:
         -----------
         omega : array_like
-            Spatial measurement omega(x) = u(T, x)
+            Spatial measurement omega(x) = u(T,x)
         f : array_like
             Known temporal source term f(t)
         lambda_reg : float
@@ -485,30 +494,29 @@ class ImprovedFractionalPDEInverseSolver:
             # Compute eigenfunction coefficients for omega(x)
             omega_coeffs = np.array([np.sum(omega * ef) * self.dx for ef in self.eigenfunctions])
             
-            # Compute the effect of f(t) on each mode - vectorized
+            # Compute the effect of f(t) with correct time differences
             f_effects = np.zeros(self.Nmax)
-            
             for n in range(self.Nmax):
-                # Create time difference matrix and mask
-                tau = self.t[:, None] - self.t[None, :]
-                mask = tau > 0
-                
-                # Compute kernel using broadcasting
-                indices = np.abs(np.arange(len(self.t))[:, None] - np.arange(len(self.t))[None, :])
-                kernel = mask * tau**(self.alpha-1) * self._ml_kernel[n, indices]
-                
-                # Compute integrand and perform numerical integration
-                integrand = f[None, :] * kernel
-                f_effects[n] = np.trapz(integrand, x=self.t, axis=1)[-1] / gamma(self.alpha)
+                integrand = np.zeros(self.K+1)
+                for j in range(self.K+1):
+                    tau = self.t[j]
+                    t_T = self.T
+                    if t_T > tau:  # Only consider valid time differences
+                        kernel = (t_T - tau)**(self.alpha - 1) * mittag_leffler(
+                            self.alpha, 
+                            self.alpha, 
+                            -self.eigenvalues[n] * (t_T - tau)**self.alpha
+                        )
+                        integrand[j] = f[j] * kernel
+                f_effects[n] = np.trapz(integrand, x=self.t) / gamma(self.alpha)
             
             if method == 'tikhonov':
                 # Compute coefficients for h(x) with Tikhonov regularization
                 h_coeffs = np.zeros(self.Nmax)
-                
                 for n in range(self.Nmax):
                     denominator = self.T**self.alpha * self._ml_kernel[n, -1] + lambda_reg * self.eigenvalues[n]
                     h_coeffs[n] = (omega_coeffs[n] - f_effects[n]) / denominator
-            
+                    
             elif method == 'tsvd':
                 # Construct system matrix
                 A = np.diag(self.T**self.alpha * self._ml_kernel[:, -1])
@@ -516,42 +524,49 @@ class ImprovedFractionalPDEInverseSolver:
                 
                 # SVD decomposition
                 U, s, Vh = linalg.svd(A)
-                
-                # Determine truncation level
                 s_filtered = np.where(s > lambda_reg * s[0], s, 0)
                 s_inv = np.where(s_filtered > 0, 1.0 / s_filtered, 0)
-                
-                # Reconstruct solution
                 h_coeffs = Vh.T @ (s_inv * (U.T @ b))
-            
+                
             elif method == 'l1':
-                # Construct system matrix
+                # Use the same ISTA implementation as in solve_inverse_problem_1
                 A = np.diag(self.T**self.alpha * self._ml_kernel[:, -1])
                 b = omega_coeffs - f_effects
                 
-                # L1 regularization using optimization
-                def objective(h_coeffs_flat):
-                    h_coeffs_reshaped = h_coeffs_flat.reshape(-1)
-                    residual = A @ h_coeffs_reshaped - b
-                    return 0.5 * np.sum(residual**2) + lambda_reg * np.sum(np.abs(h_coeffs_reshaped))
+                def ista(A, b, lambda_reg, max_iter=1000, tol=1e-6):
+                    L = np.linalg.norm(A.T @ A, ord=2)
+                    step_size = 1.0 / L
+                    
+                    x = np.zeros(A.shape[1])
+                    x_prev = x.copy()
+                    
+                    for _ in range(max_iter):
+                        grad = A.T @ (A @ x - b)
+                        x_new = x - step_size * grad
+                        x_new = np.sign(x_new) * np.maximum(
+                            np.abs(x_new) - step_size * lambda_reg, 0
+                        )
+                        
+                        if np.linalg.norm(x_new - x_prev) < tol:
+                            break
+                            
+                        x_prev = x.copy()
+                        x = x_new
+                    
+                    return x
                 
-                # Initial guess
-                h0 = np.zeros(self.Nmax)
+                h_coeffs = ista(A, b, lambda_reg)
                 
-                # Solve optimization problem
-                result = minimize(objective, h0, method='L-BFGS-B')
-                h_coeffs = result.x
-            
             else:
                 raise ValueError("Regularization method must be 'tikhonov', 'tsvd', or 'l1'")
-            
+                
             # Reconstruct h(x) from its coefficients
             h = np.zeros_like(self.x)
             for n, coeff in enumerate(h_coeffs):
                 h += coeff * self.eigenfunctions[n]
             
             return h
-        
+            
         elif self.N == 2:
             # Compute eigenfunction coefficients for omega(x,y)
             omega_coeffs = []
@@ -625,7 +640,7 @@ class ImprovedFractionalPDEInverseSolver:
     
     def estimate_optimal_regularization(self, g, method='l_curve', param_range=None):
         """
-        Estimate optimal regularization parameter using L-curve or GCV.
+        Estimate optimal regularization parameter using L-curve or GCV with improved efficiency.
         
         Parameters:
         -----------
@@ -644,48 +659,59 @@ class ImprovedFractionalPDEInverseSolver:
         if param_range is None:
             param_range = np.logspace(-8, 0, 20)
         
+        # Compute K_matrix once for efficiency
+        K = self.K
+        K_matrix = np.zeros((K+1, K+1))
+        x_obs_idx = self.M // 2
+        
+        # Build kernel matrix efficiently
+        for i in range(K+1):
+            for j in range(i):
+                kernel_sum = 0
+                t_diff = self.t[i] - self.t[j]
+                
+                # Vectorize eigenfunction computation
+                ef_vals = np.array([ef[x_obs_idx] for ef in self.eigenfunctions])
+                kernels = t_diff**(self.alpha - 1) * np.array([
+                    mittag_leffler(
+                        self.alpha,
+                        self.alpha,
+                        -eigenval * t_diff**self.alpha
+                    ) for eigenval in self.eigenvalues[:self.Nmax]
+                ])
+                
+                kernel_sum = np.sum(ef_vals**2 * kernels)
+                K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
+        
+        # Make matrix symmetric
+        K_matrix = K_matrix + K_matrix.T - np.diag(np.diag(K_matrix))
+        
         if method == 'l_curve':
             residual_norms = []
             solution_norms = []
             
-            for lambda_reg in param_range:
-                # Solve inverse problem with current regularization
-                f = self.solve_inverse_problem_1(g, lambda_reg=lambda_reg)
-                
-                # Compute residual norm ||Af - g||^2
-                K = self.K
-                alpha = self.alpha
-                K_matrix = np.zeros((K+1, K+1))
-                
-                # Build kernel matrix (simplified for efficiency)
-                for i in range(K+1):
-                    for j in range(i+1):
-                        if i > j:
-                            kernel_sum = 0
-                            for n, ef in enumerate(self.eigenfunctions):
-                                x_obs_idx = self.M // 2
-                                ef_val = ef[x_obs_idx]
-                                kernel_sum += ef_val**2 * (self.t[i] - self.t[j])**(self.alpha-1) * self._ml_kernel[n, i-j]
-                            
-                            K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
-                
-                residual = K_matrix @ f - g
-                residual_norm = np.linalg.norm(residual)
-                residual_norms.append(residual_norm)
-                
-                # Compute solution norm ||f||^2
-                solution_norm = np.linalg.norm(f)
-                solution_norms.append(solution_norm)
+            # Compute SVD once for efficiency
+            U, s, Vh = linalg.svd(K_matrix)
             
-            # Find corner of L-curve (maximum curvature)
+            for lambda_reg in param_range:
+                # Solve using pre-computed SVD
+                s_filtered = s / (s**2 + lambda_reg)
+                f = Vh.T @ (s_filtered * (U.T @ g))
+                
+                # Compute residual and solution norms
+                residual = K_matrix @ f - g
+                residual_norms.append(np.linalg.norm(residual))
+                solution_norms.append(np.linalg.norm(f))
+            
+            # Convert to numpy arrays for vectorized operations
             residual_norms = np.array(residual_norms)
             solution_norms = np.array(solution_norms)
             
-            # Compute curvature (approximate)
+            # Compute curvature using vectorized operations
             x = np.log(residual_norms)
             y = np.log(solution_norms)
             
-            # First derivatives
+            # First derivatives using numpy gradient
             dx = np.gradient(x)
             dy = np.gradient(y)
             
@@ -693,63 +719,45 @@ class ImprovedFractionalPDEInverseSolver:
             d2x = np.gradient(dx)
             d2y = np.gradient(dy)
             
-            # Curvature formula
+            # Curvature formula (vectorized)
             curvature = np.abs(dx * d2y - d2x * dy) / (dx**2 + dy**2)**(1.5)
             
             # Find maximum curvature
             idx_max = np.argmax(curvature)
             lambda_opt = param_range[idx_max]
             
-            return lambda_opt
-        
         elif method == 'gcv':
             gcv_values = []
             
+            # Compute SVD once
+            U, s, Vh = linalg.svd(K_matrix)
+            
             for lambda_reg in param_range:
-                # Solve inverse problem with current regularization
-                f = self.solve_inverse_problem_1(g, lambda_reg=lambda_reg)
+                # Compute filtered singular values
+                s_filtered = s / (s**2 + lambda_reg)
                 
-                # Compute GCV function
-                K = self.K
-                alpha = self.alpha
-                K_matrix = np.zeros((K+1, K+1))
-                
-                # Build kernel matrix (simplified for efficiency)
-                for i in range(K+1):
-                    for j in range(i+1):
-                        if i > j:
-                            kernel_sum = 0
-                            for n, ef in enumerate(self.eigenfunctions):
-                                x_obs_idx = self.M // 2
-                                ef_val = ef[x_obs_idx]
-                                kernel_sum += ef_val**2 * (self.t[i] - self.t[j])**(self.alpha-1) * self._ml_kernel[n, i-j]
-                            
-                            K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
-                
-                # Add regularization
-                A = K_matrix + lambda_reg * np.eye(K+1)
+                # Solve using pre-computed SVD
+                f = Vh.T @ (s_filtered * (U.T @ g))
                 
                 # Compute residual
                 residual = K_matrix @ f - g
                 residual_norm_sq = np.sum(residual**2)
                 
-                # Compute trace of influence matrix
-                U, s, Vh = linalg.svd(K_matrix)
-                s_filtered = s / (s**2 + lambda_reg)
+                # Compute trace term
                 trace = np.sum(s_filtered)
                 
-                # GCV function
+                # Compute GCV function
                 gcv = residual_norm_sq / (K+1 - trace)**2
                 gcv_values.append(gcv)
             
-            # Find minimum GCV
+            # Find minimum GCV value
             idx_min = np.argmin(gcv_values)
             lambda_opt = param_range[idx_min]
             
-            return lambda_opt
-        
         else:
             raise ValueError("Method must be 'l_curve' or 'gcv'")
+        
+        return lambda_opt
 
 # Demonstration script
 def demo_improved_solver():
