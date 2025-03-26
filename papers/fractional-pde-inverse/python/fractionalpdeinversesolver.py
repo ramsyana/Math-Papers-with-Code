@@ -661,8 +661,8 @@ class ImprovedFractionalPDEInverseSolver:
                 kernel_sum = np.sum(ef_vals**2 * kernels)
                 K_matrix[i, j] = kernel_sum * self.dt / gamma(self.alpha)
         
-        # Make matrix symmetric
-        K_matrix = K_matrix + K_matrix.T - np.diag(np.diag(K_matrix))
+        # Make matrix symmetric (REMOVE THIS LINE)
+        # K_matrix = K_matrix + K_matrix.T - np.diag(np.diag(K_matrix))
         
         if method == 'l_curve':
             residual_norms = []
