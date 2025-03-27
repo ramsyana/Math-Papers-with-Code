@@ -12,6 +12,7 @@ A collection of implementations of mathematical algorithms and concepts from var
 | A Remark on an Explicit Formula for the Sums of Powers of Integers | José L. Cereceda | [2503.14508v2](https://arxiv.org/pdf/2503.14508v2) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/stirling-numbers-power-sums/` |
 | The Neveu-Schwarz Group and Schwarz's Extended Super Mumford Form | Katherine A. Maxwell & Alexander A. Voronov | [2412.18585](https://arxiv.org/pdf/2412.18585) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ⏸️ On Hold | `papers/super-mumford/` |
 | Derivative Polynomials and Infinite Series for Squigonometric Functions | Bart S. Van Lith | [2503.19624](https://arxiv.org/abs/2503.19624) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/squigonometry/` |
+| Inverse Source Problems for a Multidimensional Time-Fractional Wave Equation | D.K. Durdiev | [2503.17404v1](https://arxiv.org/abs/2503.17404v1) | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | ✅ Complete | `papers/frac-wave-inverse-problems/` |
 
 ### Implementation Status Legend
 
