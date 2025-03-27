@@ -2,11 +2,11 @@
 
 This directory contains a Python implementation for solving direct and inverse source problems associated with a 1D time-fractional wave equation, based on the work by D.K. Durdiev: [https://arxiv.org/abs/2503.17404v1](https://arxiv.org/abs/2503.17404v1)
 
-\[
+$$
 \partial_t^\alpha u - L u = f(t) h(x), \quad 1 < \alpha < 2
-\]
+$$
 
-where \( L = -\frac{d^2}{dx^2} \) is the negative Laplacian with homogeneous Dirichlet boundary conditions on the interval \( [0, L] \).
+where $L = -\frac{d^2}{dx^2}$ is the negative Laplacian with homogeneous Dirichlet boundary conditions on the interval $[0, L]$.
 
 **Source Paper:**  
 Durdiev, D. K. (2024). *Inverse Source Problems for a Multidimensional Time-Fractional Wave Equation with Integral Overdetermination Conditions*. [arXiv:2503.17404v1](https://arxiv.org/abs/2503.17404v1)
@@ -15,9 +15,9 @@ Durdiev, D. K. (2024). *Inverse Source Problems for a Multidimensional Time-Frac
 
 The code provides tools to:
 
-1. **Solve the Direct Problem (DP)**: Compute the solution \( u(t, x) \) given the source components \( f(t) \), \( h(x) \), initial conditions \( u(0,x) = \phi(x) \), \( u_t(0,x) = \psi(x) \), and boundary conditions.
-2. **Solve Inverse Problem 1 (IP1)**: Recover the time-dependent source component \( f(t) \) given \( h(x) \), initial/boundary conditions, and the spatial integral overdetermination data \( g(t) = \int_0^L h(x) u(t,x) \, dx \).
-3. **Solve Inverse Problem 2 (IP2)**: Recover the space-dependent source component \( h(x) \) given \( f(t) \), initial/boundary conditions, and the time-averaged velocity data \( \omega(x) = \int_0^T f(t) \partial_t u(t,x) \, dt \).
+1. **Solve the Direct Problem (DP)**: Compute the solution $u(t, x)$ given the source components $f(t)$, $h(x)$, initial conditions $u(0,x) = \phi(x)$, $u_t(0,x) = \psi(x)$, and boundary conditions.
+2. **Solve Inverse Problem 1 (IP1)**: Recover the time-dependent source component $f(t)$ given $h(x)$, initial/boundary conditions, and the spatial integral overdetermination data $g(t) = \int_0^L h(x) u(t,x) \, dx$.
+3. **Solve Inverse Problem 2 (IP2)**: Recover the space-dependent source component $h(x)$ given $f(t)$, initial/boundary conditions, and the time-averaged velocity data $\omega(x) = \int_0^T f(t) \partial_t u(t,x) \, dt$.
 
 ## Features
 
@@ -104,24 +104,24 @@ Key parameters can be adjusted in both main_solver.py and test_solver.py :
 ## Implementation Details
 ### Direct Problem
 The solution is obtained via eigenfunction expansion:
-[
+$$
 u(t,x) = \sum_{n=1}^{\infty} u_n(t) X_n(x)
-]
-where ( X_n(x) ) are the eigenfunctions of ( L ) (normalized sine functions for the 1D case), and ( u_n(t) ) are time-dependent coefficients computed using Mittag-Leffler functions.
+$$
+where $X_n(x)$ are the eigenfunctions of $L$ (normalized sine functions for the 1D case), and $u_n(t)$ are time-dependent coefficients computed using Mittag-Leffler functions.
 
 ### Inverse Problem 1
-The time component ( f(t) ) is recovered by solving a second-kind Volterra integral equation:
-[
+The time component $f(t)$ is recovered by solving a second-kind Volterra integral equation:
+$$
 f(t) = G(t) + \int_0^t K(t,s) f(s) ds
-]
-where ( G(t) ) and ( K(t,s) ) are computed from the overdetermination data ( g(t) ) and the known spatial component ( h(x) ).
+$$
+where $G(t)$ and $K(t,s)$ are computed from the overdetermination data $g(t)$ and the known spatial component $h(x)$.
 
 ### Inverse Problem 2
-The space component ( h(x) ) is recovered by minimizing:
-[
+The space component $h(x)$ is recovered by minimizing:
+$$
 \min_{h} \left| \omega(x) - \int_0^T f(t) \partial_t u(t,x) dt \right|^2 + \lambda |h|^2
-]
-where ( \omega(x) ) is the overdetermination data, and ( \lambda ) is the regularization parameter.
+$$
+where $\omega(x)$ is the overdetermination data, and $\lambda$ is the regularization parameter.
 
 ## Limitations and Considerations
 
@@ -131,7 +131,7 @@ where ( \omega(x) ) is the overdetermination data, and ( \lambda ) is the regula
 
 - IP2 Convergence : The optimization for IP2 uses Nelder-Mead by default, which may converge slowly or to local minima. Consider alternative optimization methods for complex problems.
 
-- Fractional Derivative Accuracy : The L1 scheme for fractional derivatives has accuracy ( O(\Delta t^{2-\gamma}) ) where ( \gamma = \alpha-1 ).
+- Fractional Derivative Accuracy : The L1 scheme for fractional derivatives has accuracy $O(\Delta t^{2-\gamma})$ where $\gamma = \alpha-1$.
 
 - Memory Usage : The caching of Mittag-Leffler function values can consume significant memory for long simulations.
 
