@@ -21,22 +21,24 @@ The code provides tools to:
 
 ## Features
 
-- **Direct Problem Solver**: Uses the Fourier method with eigenfunction expansion.
+- **Direct Problem Solver**: Uses the Fourier method with eigenfunction expansion and Mittag-Leffler functions for time-dependent coefficients.
 - **Inverse Problem 1 Solver**: Implements the second-kind Volterra integral equation approach derived from the overdetermination condition, solved numerically using the Product Trapezoidal Rule.
-- **Inverse Problem 2 Solver**: Provides a basic framework using optimization (`scipy.optimize.minimize` with Nelder-Mead) to find the Fourier coefficients of \( h(x) \) by minimizing a least-squares cost function with optional Tikhonov regularization.
+- **Inverse Problem 2 Solver**: Provides an optimization framework using `scipy.optimize.minimize` to find the Fourier coefficients of \( h(x) \) by minimizing a least-squares cost function with Tikhonov regularization.
 - **Fractional Derivative Approximation**: Uses the L1 scheme for approximating the Caputo fractional derivative \( \partial_t^{\alpha-1} \) required in the IP1 solver.
-- **Mittag-Leffler Function**: Utilizes the efficient `mittaglet` library with caching (`functools.lru_cache`) for repeated evaluations.
-- **Testing Suite**: Includes `test_cases.py` for verifying the implementation of DP, IP1, and IP2 with defined test functions and error metrics.
+- **Mittag-Leffler Function**: Custom implementation with caching (`functools.lru_cache`) for efficient repeated evaluations.
+- **Robust Error Handling**: Comprehensive error checking, NaN detection, and warning systems throughout the solvers.
+- **Testing Framework**: Includes `test_solver.py` for verifying the implementation with defined test functions and detailed error metrics.
 - **Visualization**: Generates plots comparing true vs. estimated functions for IP1 and IP2, and contour plots for the DP solution.
 
 ## File Structure
 
 ```
 /papers/frac-wave-inverse-problems/
-├── /python/main_solver.py        # Main script with solver implementations
-├── /python/tests/test_cases.py   # Script for running test cases
-├── /python/tests/requirements.txt # Python dependencies
-└── README.md                     # This file
+├── /python/
+│   ├── main_solver.py        # Main implementation with all solvers
+│   ├── test_solver.py        # Test framework for all solvers
+│   └── requirements.txt      # Python dependencies
+└── README.md                 # Readme file
 ```
 
 ## Installation
@@ -76,41 +78,70 @@ The code provides tools to:
 2. **Run the test suite**:
    This script executes predefined test cases for DP, IP1, and IP2, reporting errors and showing comparison plots.
    ```bash
-   python tests/test_cases.py
+   python test_solver.py
    ```
 
 ## Configuration
 
-Key parameters can be adjusted directly within `main_solver.py` and `test_cases.py`:
+Key parameters can be adjusted directly within `main_solver.py` and `test_solver.py`:
 
-- `ALPHA`: Fractional order (\(1 < \alpha < 2\)).
-- `L_DOMAIN`: Length of the spatial domain \( [0, L] \).
-- `T_FINAL`: Final time \( T \).
-- `N_TERMS`: Number of Fourier series terms used in final solvers.
-- `NX`, `NT`: Number of spatial and temporal grid points. Higher values increase accuracy but also computation time.
-- `SERIES_TOL`: Tolerance for early stopping of infinite series summations.
-- `IP2_REG_LAMBDA`: Tikhonov regularization parameter for IP2 optimization (helps stabilize the inverse problem).
-- `IP2_N_H_OPTIMIZE`: Number of Fourier coefficients of \( h(x) \) to optimize for in IP2.
-- `IP2_DP_N_TERMS_OPTIM`: Number of terms used for the internal DP solver during IP2 optimization (can be lower than `N_TERMS` for speed).
+Key parameters can be adjusted in both main_solver.py and test_solver.py :
+
+### Main Parameters
+- ALPHA : Fractional order ((1 < \alpha < 2))
+- L_DOMAIN : Length of the spatial domain ( [0, L] )
+- T_FINAL : Final time ( T )
+- N_TERMS : Number of Fourier series terms used in solvers
+- NX , NT : Number of spatial and temporal grid points
+
+### Numerical Control Parameters
+- SERIES_TOL : Tolerance for early stopping of infinite series summations
+- ML_MAX_TERMS , ML_SERIES_TOL : Controls for Mittag-Leffler function computation
+- DP_QUAD_LIMIT , DP_QUAD_EPSABS , DP_QUAD_EPSREL : Integration controls for the DP solver
+- IP2_REG_LAMBDA : Tikhonov regularization parameter for IP2 optimization
+- IP2_MAX_ITER : Maximum iterations for IP2 optimizer
 
 ## Implementation Details
+### Direct Problem
+The solution is obtained via eigenfunction expansion:
+[
+u(t,x) = \sum_{n=1}^{\infty} u_n(t) X_n(x)
+]
+where ( X_n(x) ) are the eigenfunctions of ( L ) (normalized sine functions for the 1D case), and ( u_n(t) ) are time-dependent coefficients computed using Mittag-Leffler functions.
 
-- **Direct Problem**: Solution obtained via eigenfunction expansion (sine series for \( L = -d^2/dx^2 \)) and solving the resulting fractional ODEs for time-dependent coefficients using Mittag-Leffler functions (Eq. 15 in the paper).
-- **Fractional Derivative (IP1)**: The term \( G_0(t) = \partial_t^{\alpha-1} G'(t) \) is computed using the L1 scheme, suitable for \( 0 < \alpha-1 < 1 \).
-- **Volterra Equation (IP1)**: The second-kind equation (Eq. 29) is solved step-by-step using the Product Trapezoidal Rule.
-- **Optimization (IP2)**: A least-squares cost function comparing the computed \( \int f(t) u_t dt \) with the target \( \omega(x) \) is minimized using `scipy.optimize.minimize`. Regularization is included.
+### Inverse Problem 1
+The time component ( f(t) ) is recovered by solving a second-kind Volterra integral equation:
+[
+f(t) = G(t) + \int_0^t K(t,s) f(s) ds
+]
+where ( G(t) ) and ( K(t,s) ) are computed from the overdetermination data ( g(t) ) and the known spatial component ( h(x) ).
 
-## Limitations
+### Inverse Problem 2
+The space component ( h(x) ) is recovered by minimizing:
+[
+\min_{h} \left| \omega(x) - \int_0^T f(t) \partial_t u(t,x) dt \right|^2 + \lambda |h|^2
+]
+where ( \omega(x) ) is the overdetermination data, and ( \lambda ) is the regularization parameter.
 
-- **1D Spatial Domain**: The current implementation is specific to \( L = -d^2/dx^2 \) on a 1D interval \( [0, L] \). Extension to higher dimensions or different operators \( L \) would require implementing appropriate eigensolvers or different numerical methods (e.g., finite differences/elements).
-- **Uniform Time Grid**: Assumes a uniform time grid `dt`. The L1 scheme and Product Trapezoidal Rule used are implemented for uniform grids. Non-uniform grids (often beneficial near \( t=0 \) for fractional problems) would require adapting these numerical methods.
-- **IP2 Convergence**: The optimization for IP2 uses a gradient-free method (Nelder-Mead by default), which can be slow and may converge to local minima, especially without a good initial guess or appropriate regularization.
-- **Numerical Approximations**: Accuracy depends on grid sizes (`NX`, `NT`), number of terms (`N_TERMS`), and the tolerance (`SERIES_TOL`). The L1 scheme accuracy is typically \( O(\Delta t^{2-\gamma}) \).
+## Limitations and Considerations
+
+- Numerical Stability : The Mittag-Leffler function implementation uses series summation which can be unstable for certain parameter ranges. Consider using specialized libraries for production use.
+
+- Computational Cost : The DP solver can be computationally intensive for large N_TERMS or fine grids due to repeated Mittag-Leffler function evaluations.
+
+- IP2 Convergence : The optimization for IP2 uses Nelder-Mead by default, which may converge slowly or to local minima. Consider alternative optimization methods for complex problems.
+
+- Fractional Derivative Accuracy : The L1 scheme for fractional derivatives has accuracy ( O(\Delta t^{2-\gamma}) ) where ( \gamma = \alpha-1 ).
+
+- Memory Usage : The caching of Mittag-Leffler function values can consume significant memory for long simulations.
 
 ## References
 
-[D.K. Durdiev, *Inverse Source Problems for a Multidimensional Time-Fractional Wave Equation with Integral Overdetermination Conditions*](https://arxiv.org/abs/2503.17404v1)  
-**Abstract**: In this paper, we consider two linear inverse problems for the time-fractional wave equation, assuming that its right-hand side takes the separable form \( f(t)h(x) \), where \( t \geq 0 \) and \( x \in \Omega \subset \mathbb{R}^N \). The objective is to determine the unknown function \( f(t) \) (Inverse Problem 1) and \( h(x) \) (Inverse Problem 2), given that the other function is known.  
+- [D.K. Durdiev, *Inverse Source Problems for a Multidimensional Time-Fractional Wave Equation with Integral Overdetermination Conditions*](https://arxiv.org/abs/2503.17404v1)
+
+**Abstract**: In this paper, we consider two linear inverse problems for the time-fractional wave equation, assuming that its right-hand side takes the separable form \( f(t)h(x) \), where \( t \geq 0 \) and \( x \in \Omega \subset \mathbb{R}^N \). The objective is to determine the unknown function \( f(t) \) (Inverse Problem 1) and \( h(x) \) (Inverse Problem 2), given that the other function is known. 
+
+- Podlubny, I. (1999). Fractional differential equations. Academic Press .
 
 *Keywords*: Fractional wave equation, Dirichlet boundary condition, overdetermination condition, Mittag-Leffler function, Fourier method, existence, uniqueness.
 
@@ -123,5 +154,3 @@ This project is licensed under the MIT License.
 ---
 
 *This project is intended for research and educational purposes. Contributions via GitHub Issues or Pull Requests are welcome!*
-
-
